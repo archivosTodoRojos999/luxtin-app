@@ -55,18 +55,25 @@
   <section id="deportes" class="section active">
     <div class="section-header">
       <h1>Partidos en Vivo</h1>
-      <p class="section-sub">Fútbol mundial en tiempo real — ESPN</p>
+      <p class="section-sub">Fútbol mundial en tiempo real — datos de ESPN</p>
     </div>
 
     <div class="filter-chips" id="league-filters">
       <button class="chip active" data-league="all">Todas</button>
+      <button class="chip" data-league="arg.1">Argentina</button>
       <button class="chip" data-league="eng.1">Inglaterra</button>
       <button class="chip" data-league="esp.1">España</button>
       <button class="chip" data-league="ita.1">Italia</button>
       <button class="chip" data-league="ger.1">Alemania</button>
-      <button class="chip" data-league="arg.1">Argentina</button>
+      <button class="chip" data-league="fra.1">Francia</button>
+      <button class="chip" data-league="bra.1">Brasil</button>
+      <button class="chip" data-league="mex.1">México</button>
+      <button class="chip" data-league="uefa.champions">Champions</button>
+      <button class="chip" data-league="uefa.europa">Europa League</button>
+      <button class="chip" data-league="usa.1">MLS</button>
       <button class="chip" data-league="ned.1">Holanda</button>
       <button class="chip" data-league="por.1">Portugal</button>
+      <button class="chip" data-league="col.1">Colombia</button>
     </div>
 
     <div id="matches-list" class="matches-list">
@@ -80,22 +87,30 @@
   <section id="musica" class="section">
     <div class="section-header">
       <h1>Música</h1>
-      <p class="section-sub">Canciones reales — busca y escucha</p>
+      <p class="section-sub">Cientos de canciones para reproducir — busca o explora por género</p>
     </div>
 
-    <!-- BUSCADOR -->
     <div class="search-bar">
       <input type="text" id="music-search" placeholder="Buscar canción o artista...">
       <button id="music-search-btn" class="btn-primary">Buscar</button>
     </div>
 
-    <!-- TRENDING / RESULTADOS TAB -->
-    <div class="filter-chips" id="music-tabs">
-      <button class="chip active" data-tab="trending">🔥 Tendencias</button>
-      <button class="chip" data-tab="results">Resultados</button>
+    <div class="filter-chips" id="music-genre-filters">
+      <button class="chip active" data-genre="trending">🔥 Tendencias</button>
+      <button class="chip" data-genre="pop">Pop</button>
+      <button class="chip" data-genre="reggaeton">Reggaeton</button>
+      <button class="chip" data-genre="rock">Rock</button>
+      <button class="chip" data-genre="electronica">Electrónica</button>
+      <button class="chip" data-genre="hip hop">Hip Hop</button>
+      <button class="chip" data-genre="cumbia">Cumbia</button>
+      <button class="chip" data-genre="salsa">Salsa</button>
+      <button class="chip" data-genre="bachata">Bachata</button>
+      <button class="chip" data-genre="romantica">Romántica</button>
+      <button class="chip" data-genre="rap">Rap</button>
+      <button class="chip" data-genre="trap">Trap</button>
     </div>
 
-    <!-- REPRODUCTOR DE AUDIO (preview + link YouTube) -->
+    <!-- REPRODUCTOR -->
     <div id="music-player" class="music-player hidden">
       <div class="player-info">
         <div class="player-main-row">
@@ -117,16 +132,22 @@
       </div>
     </div>
 
-    <!-- RESULTADOS / TRENDING -->
-    <div id="music-trending" class="music-grid"></div>
-    <div id="music-results" class="music-grid hidden"></div>
+    <div id="music-grid" class="music-grid">
+      <div class="loading">Cargando música...</div>
+    </div>
   </section>
 
   <!-- ===================== SECCIÓN PELÍCULAS ===================== -->
   <section id="peliculas" class="section">
     <div class="section-header">
       <h1>Películas</h1>
-      <p class="section-sub">Catálogo real con trailers — Apple Movies</p>
+      <p class="section-sub">Películas reales con tráiler en español — elige tu categoría</p>
+    </div>
+
+    <div class="filter-chips" id="movie-categories">
+      <button class="chip active" data-cat="ninos">👶 Niños</button>
+      <button class="chip" data-cat="adolescentes">🎬 Adolescentes</button>
+      <button class="chip" data-cat="adultos">🎭 Adultos</button>
     </div>
 
     <div class="search-bar">
@@ -134,15 +155,10 @@
       <button id="movie-search-btn" class="btn-primary">Buscar</button>
     </div>
 
-    <div class="filter-chips" id="movie-tabs">
-      <button class="chip active" data-tab="trending">🔥 Tendencias</button>
-      <button class="chip" data-tab="results">Resultados</button>
+    <div id="movies-grid" class="movies-grid">
+      <div class="loading">Cargando películas...</div>
     </div>
 
-    <div id="movies-trending" class="movies-grid"></div>
-    <div id="movies-grid" class="movies-grid hidden"></div>
-
-    <!-- MODAL PELÍCULA -->
     <div id="movie-modal" class="movie-modal hidden">
       <div class="modal-content">
         <button id="close-modal" class="modal-close">✕</button>
@@ -151,7 +167,7 @@
     </div>
   </section>
 
-  <!-- MINI PLAYER FLOTANTE -->
+  <!-- MINI PLAYER -->
   <div id="mini-player" class="mini-player hidden">
     <div class="mini-player-info">
       <div id="mini-title"></div>

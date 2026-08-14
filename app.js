@@ -374,32 +374,27 @@ function openMovieModal(i) {
     else starsHtml += '<span style="color:#555;">★</span>';
   }
 
-  const ytTrailer = encodeURIComponent(m.title + ' ' + year + ' tráiler español');
-  const ytFull = encodeURIComponent(m.title + ' ' + year + ' pelicula completa español');
-
-  // Reproductor VidSrc si tenemos el IMDb ID
+  // Reproductor VidSrc (video real, sin YouTube)
   let videoHtml = '';
   if (m.imdbId) {
-    // Merlina es serie de TV → formato diferente
     const isTV = m.title.includes('Merlina');
     const embedUrl = isTV
       ? `https://vsembed.ru/embed/tv/${m.imdbId}/2/1`
       : `${VIDSRC_BASE}${m.imdbId}`;
 
     videoHtml = `
-      <h3 style="font-size:1rem;margin:1rem 0 0.5rem;">▶ Ver Película Online</h3>
-      <div class="trailer-container" style="position:relative;width:100%;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;">
-        <iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; fullscreen"
+      <div id="player-wrapper" style="position:relative;width:100%;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;margin-top:1rem;">
+        <iframe id="movie-iframe" src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           style="position:absolute;inset:0;width:100%;height:100%;border:none;"
           scrolling="no" frameborder="0"></iframe>
+        <button id="fs-btn" onclick="toggleFullscreen()"
+          style="position:absolute;bottom:10px;right:10px;z-index:10;background:rgba(0,0,0,0.7);color:white;border:none;width:40px;height:40px;border-radius:8px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">
+          ⛶
+        </button>
       </div>
-      <p style="color:var(--text-muted);font-size:0.72rem;margin-top:0.5rem;">
-        ⚠ Si el reproductor no carga, probá con los botones de YouTube abajo.
-        Puede mostrar publicidad antes de la película.
-      </p>
     `;
   } else {
-    videoHtml = '<p style="color:var(--text-muted);margin-top:1rem;">No hay reproductor disponible para esta película. Usá los botones de YouTube abajo.</p>';
+    videoHtml = '<p style="color:var(--text-muted);margin-top:1rem;">No hay reproductor disponible para esta película.</p>';
   }
 
   body.innerHTML = `
@@ -412,16 +407,32 @@ function openMovieModal(i) {
         <span>${starsHtml} ${stars}/5</span>
       </div>
       <p class="modal-overview">${desc}</p>
-
       ${videoHtml}
-
-      <div style="margin-top:1.2rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
-        <a href="https://www.youtube.com/results?search_query=${ytTrailer}" target="_blank" class="btn-primary" style="text-decoration:none;">🎬 Ver tráiler en YouTube</a>
-        <a href="https://www.youtube.com/results?search_query=${ytFull}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">🔍 Ver película en YouTube</a>
-      </div>
     </div>
   `;
 }
+
+function toggleFullscreen() {
+  const iframe = document.getElementById('movie-iframe');
+  const wrapper = document.getElementById('player-wrapper');
+  if (!iframe && !wrapper) return;
+  
+  const elem = wrapper || iframe;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
+  } else if (iframe && iframe.requestFullscreen) {
+    iframe.requestFullscreen();
+  } else if (iframe && iframe.webkitRequestFullscreen) {
+    iframe.webkitRequestFullscreen();
+  }
+}
+
+
+
 
 function setupMovieControls() {
   document.querySelectorAll('#movie-categories .chip').forEach(chip => {

@@ -2,10 +2,10 @@
    LUXTIN APP — Todo funciona SIN API KEYS
    
    APIs (todas gratuitas, sin registro):
-   - ESPN:   site.api.espn.com → fútbol en vivo (15 ligas)
-   - iTunes: itunes.apple.com → música y películas (tienda España = español)
-   - Apple RSS: rss.applemarketingtools.com → tendencias
-   - Películas destacadas: data personalizada + iTunes
+   - ESPN:        site.api.espn.com → fútbol en vivo (15 ligas)
+   - iTunes:      itunes.apple.com → música (tienda España = español)
+   - Apple RSS:   rss.applemarketingtools.com → tendencias musicales
+   - DevsAPIHub:  devsapihub.com/api-movies → 30 películas reales
    ==================================================================== */
 
 // ===================== SPLASH =====================
@@ -376,37 +376,25 @@ async function searchMusic(query) {
   }
 }
 
-// ===================== PELÍCULAS — Destacadas + iTunes (sin key) =====================
+// ===================== PELÍCULAS — DevsAPIHub (30 películas reales) =====================
+// API: https://devsapihub.com/api-movies
+// Endpoints:
+//   GET /api-movies              → todas
+//   GET /api-movies/genre/:g     → filtra por género (coma para varios)
+//   GET /api-movies/year/:year   → filtra por año
+//   GET /api-movies/stars/:stars → filtra por calificación
+
+const MOVIES_API = 'https://devsapihub.com/api-movies';
+
 let moviesList = [];
 let loadedMovieCategories = {};
 
-// Películas destacadas personalizadas
-const FEATURED_MOVIES = [
-  {
-    id: 1,
-    title: "The Shawshank Redemption",
-    description: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
-    year: 1994,
-    image_url: "https://devsapihub.com/img-movies/1.jpg",
-    genre: ["Drama"],
-    stars: 5
-  },
-  {
-    id: 2,
-    title: "Jumanji",
-    description: "In Jumanji: The Next Level, the gang is back but the game has changed.",
-    year: 2019,
-    image_url: "https://devsapihub.com/img-movies/2.jpg",
-    genre: ["Adventure", "Fantasy", "Comedy"],
-    stars: 3.4
-  }
-];
-
-const MOVIE_CATEGORIES = {
-  destacadas: null, // usa FEATURED_MOVIES + busca tráilers en iTunes
-  ninos: ['pelicula animacion', 'pelicula infantil', 'pelicula familiar disney', 'pelicula pixar'],
-  adolescentes: ['pelicula accion', 'pelicula aventura', 'pelicula superheroes', 'pelicula fantastica'],
-  adultos: ['pelicula drama', 'pelicula thriller', 'pelicula comedia', 'pelicula terror'],
+// Mapeo de categorías a géneros de la API
+const MOVIE_CATEGORY_GENRES = {
+  destacadas: null, // todas las películas
+  ninos: 'Animation,Family,Comedy,Adventure,Fantasy',
+  adolescentes: 'Action,Adventure,Sci-Fi,Fantasy,Thriller,Suspense',
+  adultos: 'Drama,Crime,Biography,Western,History,Romance,Dark Comedy,Science Fiction',
 };
 
 async function loadMoviesByCategory(cat) {
@@ -420,73 +408,50 @@ async function loadMoviesByCategory(cat) {
 
   container.innerHTML = '<div class="loading">🎬 Cargando películas...</div>';
 
-  // ===== Categoría DESTACADAS: usa las películas personalizadas =====
-  if (cat === 'destacadas') {
-    // Convertir formato personalizado al formato estándar
-    let movies = FEATURED_MOVIES.map(m => ({
+  try {
+    let url;
+    if (cat === 'destacadas') {
+      // Todas las películas
+      url = MOVIES_API;
+    } else {
+      // Filtrar por género
+      const genres = MOVIE_CATEGORY_GENRES[cat] || cat;
+      url = `${MOVIES_API}/genre/${genres}`;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('API error: ' + res.status);
+    const data = await res.json();
+
+    // La API devuelve el formato: { id, title, description, year, image_url, genre:[], stars }
+    moviesList = data.map(m => ({
+      id: m.id,
       title: m.title,
-      artwork: m.image_url,
-      releaseDate: String(m.year),
-      genres: m.genre.join(', '),
-      stars: m.stars,
       description: m.description,
-      itunesUrl: '',
-      previewUrl: '', // lo buscamos abajo
-      isFeatured: true,
+      year: m.year,
+      image_url: m.image_url,
+      genre: m.genre,
+      stars: m.stars,
     }));
 
-    // Buscar tráilers en iTunes para cada película destacada
-    await Promise.allSettled(movies.map(async m => {
-      try {
-        const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(m.title)}&media=movie&limit=1&country=es`);
-        if (d.results?.[0]) {
-          const r = d.results[0];
-          m.previewUrl = r.previewUrl || '';
-          if (!m.description || m.description === r.longDescription) {
-            // mantener la descripción original si ya tiene una
-          }
-        }
-      } catch (e) { /* skip */ }
-    }));
-
-    loadedMovieCategories[cat] = movies;
-    moviesList = movies;
-    renderMovies(container, movies);
-    return;
-  }
-
-  // ===== Otras categorías: busca en iTunes =====
-  const searchTerms = MOVIE_CATEGORIES[cat] || [cat];
-  let allMovies = [];
-
-  for (const term of searchTerms) {
+    loadedMovieCategories[cat] = moviesList;
+    renderMovies(container, moviesList);
+  } catch (err) {
+    console.error('Error cargando películas:', err);
+    // Fallback: intentar con todas
     try {
-      const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=movie&limit=25&country=es`);
-      const movies = (d.results || []).map(m => ({
-        title: m.trackName,
-        artwork: (m.artworkUrl100 || '').replace('100x100', '400x600'),
-        releaseDate: m.releaseDate || '',
-        genres: m.primaryGenreName || '',
-        itunesUrl: m.trackViewUrl || '',
-        artist: m.artistName || '',
-        previewUrl: m.previewUrl || '',
-        description: m.longDescription || m.shortDescription || '',
-        isFeatured: false,
+      const res = await fetch(MOVIES_API);
+      const data = await res.json();
+      moviesList = data.map(m => ({
+        id: m.id, title: m.title, description: m.description,
+        year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars,
       }));
-      allMovies = allMovies.concat(movies);
-    } catch (e) { /* skip */ }
+      loadedMovieCategories[cat] = moviesList;
+      renderMovies(container, moviesList);
+    } catch (err2) {
+      container.innerHTML = '<div class="loading">Error al cargar películas. Reintentá más tarde.</div>';
+    }
   }
-
-  const seen = new Set();
-  allMovies = allMovies.filter(m => {
-    if (seen.has(m.title)) return false;
-    seen.add(m.title);
-    return true;
-  });
-
-  loadedMovieCategories[cat] = allMovies;
-  moviesList = allMovies;
-  renderMovies(container, allMovies);
 }
 
 function renderMovies(container, movies) {
@@ -495,23 +460,20 @@ function renderMovies(container, movies) {
     return;
   }
   container.innerHTML = movies.map((m, i) => {
-    const posterUrl = m.artwork || m.image_url || '';
-    const year = m.releaseDate?.substring(0, 4) || String(m.year || '');
-    const genres = m.genres || (Array.isArray(m.genre) ? m.genre.join(', ') : '');
-    const stars = m.stars;
-    const starsDisplay = stars ? `<span style="color:#fdcb6e;font-weight:700;">★ ${stars}</span>` : '';
+    const year = String(m.year || '');
+    const genres = Array.isArray(m.genre) ? m.genre.join(', ') : '';
+    const stars = m.stars || 0;
 
     return `
     <div class="movie-card" onclick="openMovieModal(${i})">
-      <img class="movie-poster" src="${posterUrl}" alt="" loading="lazy"
+      <img class="movie-poster" src="${m.image_url}" alt="${m.title}" loading="lazy"
            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎬</text></svg>'">
       <div class="movie-card-info">
         <div class="movie-card-title">${m.title}</div>
         <div class="movie-card-meta">
           <span>${year}</span>
           ${genres ? `<span>· ${genres}</span>` : ''}
-          ${starsDisplay}
-          ${m.previewUrl ? '<span style="color:var(--accent);">▶ Tráiler</span>' : ''}
+          <span style="color:#fdcb6e;font-weight:700;">★ ${stars}</span>
         </div>
       </div>
     </div>`;
@@ -526,44 +488,43 @@ function openMovieModal(i) {
   const body = document.getElementById('modal-body');
   modal.classList.remove('hidden');
 
-  const year = m.releaseDate?.substring(0, 4) || String(m.year || '');
-  const genres = m.genres || (Array.isArray(m.genre) ? m.genre.join(', ') : '');
-  const stars = m.stars;
-  const starsDisplay = stars ? `<span style="color:#fdcb6e;font-weight:700;">★ ${stars} / 5</span>` : '';
+  const year = String(m.year || '');
+  const genres = Array.isArray(m.genre) ? m.genre.join(', ') : '';
+  const stars = m.stars || 0;
   const desc = m.description || 'Sin descripción disponible.';
-  const backdropUrl = (m.artwork || m.image_url || '').replace('400x600', 'w780');
 
-  const ytTrailer = encodeURIComponent(m.title + ' ' + year + ' pelicula completa español');
-  const ytTrailerLink = encodeURIComponent(m.title + ' ' + year + ' trailer español');
+  // Crear estrellas visuales
+  const fullStars = Math.floor(stars);
+  const hasHalf = (stars % 1) >= 0.5;
+  let starsHtml = '';
+  for (let s = 0; s < 5; s++) {
+    if (s < fullStars) starsHtml += '<span style="color:#fdcb6e;">★</span>';
+    else if (s === fullStars && hasHalf) starsHtml += '<span style="color:#fdcb6e;">☆</span>';
+    else starsHtml += '<span style="color:#555;">★</span>';
+  }
+
+  // Links a YouTube
+  const ytTrailer = encodeURIComponent(m.title + ' ' + year + ' tráiler español');
+  const ytFull = encodeURIComponent(m.title + ' ' + year + ' pelicula completa español');
 
   body.innerHTML = `
-    ${backdropUrl ? `<div class="modal-backdrop" style="background-image:url('${backdropUrl}')"></div>` : ''}
+    ${m.image_url ? `<div class="modal-backdrop" style="background-image:url('${m.image_url}')"></div>` : ''}
     <div class="modal-body-info">
       <h2 class="modal-title">${m.title}</h2>
       <div class="modal-meta">
         ${year ? `<span>📅 ${year}</span>` : ''}
         ${genres ? `<span>🎬 ${genres}</span>` : ''}
-        ${starsDisplay}
+        <span>${starsHtml} ${stars}/5</span>
       </div>
       <p class="modal-overview">${desc}</p>
-      
-      ${m.previewUrl ? `
-        <h3 style="font-size:1rem;margin:1rem 0 0.5rem;">▶ Tráiler en Español</h3>
-        <div class="trailer-container">
-          <video controls autoplay width="100%" style="position:absolute;inset:0;width:100%;height:100%;background:#000;">
-            <source src="${m.previewUrl}" type="video/mp4">
-          </video>
-        </div>
-      ` : ''}
-      
+
       <div style="margin-top:1.2rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
-        <a href="https://www.youtube.com/results?search_query=${ytTrailerLink}" target="_blank" class="btn-primary" style="text-decoration:none;">
+        <a href="https://www.youtube.com/results?search_query=${ytTrailer}" target="_blank" class="btn-primary" style="text-decoration:none;">
           🎬 Ver tráiler en YouTube
         </a>
-        <a href="https://www.youtube.com/results?search_query=${ytTrailer}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">
+        <a href="https://www.youtube.com/results?search_query=${ytFull}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">
           🔍 Ver película completa en YouTube
         </a>
-        ${m.itunesUrl ? `<a href="${m.itunesUrl}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">Ver en iTunes</a>` : ''}
       </div>
     </div>
   `;
@@ -602,19 +563,26 @@ async function searchMovies(query) {
   const container = document.getElementById('movies-grid');
   container.innerHTML = '<div class="loading">🔍 Buscando películas...</div>';
   try {
-    const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=movie&limit=50&country=es`);
-    moviesList = (d.results || []).map(m => ({
-      title: m.trackName,
-      artwork: (m.artworkUrl100 || '').replace('100x100', '400x600'),
-      releaseDate: m.releaseDate || '',
-      genres: m.primaryGenreName || '',
-      itunesUrl: m.trackViewUrl || '',
-      artist: m.artistName || '',
-      previewUrl: m.previewUrl || '',
-      description: m.longDescription || m.shortDescription || '',
-      isFeatured: false,
+    // La API no tiene búsqueda por texto, así que traemos todas y filtramos
+    const res = await fetch(MOVIES_API);
+    const data = await res.json();
+    const q = query.toLowerCase();
+    moviesList = data.filter(m =>
+      m.title.toLowerCase().includes(q) ||
+      (Array.isArray(m.genre) && m.genre.some(g => g.toLowerCase().includes(q)))
+    ).map(m => ({
+      id: m.id, title: m.title, description: m.description,
+      year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars,
     }));
-    renderMovies(container, moviesList);
+
+    // Quitar chip activo de categorías
+    document.querySelectorAll('#movie-categories .chip').forEach(c => c.classList.remove('active'));
+
+    if (moviesList.length === 0) {
+      container.innerHTML = '<div class="loading">No se encontraron películas para "' + query + '".</div>';
+    } else {
+      renderMovies(container, moviesList);
+    }
   } catch (e) {
     container.innerHTML = '<div class="loading">Error en la búsqueda. Reintentá.</div>';
   }

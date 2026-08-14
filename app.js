@@ -5,6 +5,7 @@
    - ESPN:   site.api.espn.com → fútbol en vivo (15 ligas)
    - iTunes: itunes.apple.com → música y películas (tienda España = español)
    - Apple RSS: rss.applemarketingtools.com → tendencias
+   - Películas destacadas: data personalizada + iTunes
    ==================================================================== */
 
 // ===================== SPLASH =====================
@@ -21,7 +22,7 @@ function initApp() {
   setupNav();
   loadAllSports();
   loadMusicByGenre('trending');
-  loadMoviesByCategory('ninos');
+  loadMoviesByCategory('destacadas');
   setupMusicControls();
   setupMovieControls();
 }
@@ -108,7 +109,6 @@ async function loadAllSports() {
     });
   });
 
-  // Ordenar: en vivo primero, luego próximos, luego finalizados
   allMatches.sort((a, b) => {
     const liveA = a.status === 'STATUS_IN_PROGRESS' || a.status === 'STATUS_HALFTIME';
     const liveB = b.status === 'STATUS_IN_PROGRESS' || b.status === 'STATUS_HALFTIME';
@@ -190,7 +190,7 @@ let currentMusicIndex = -1;
 let loadedGenres = {};
 
 const MUSIC_GENRES = {
-  trending: null, // usa Apple RSS
+  trending: null,
   pop: 'musica pop',
   reggaeton: 'reggaeton',
   rock: 'rock en español',
@@ -218,7 +218,6 @@ async function loadMusicByGenre(genre) {
     let tracks = [];
 
     if (genre === 'trending') {
-      // Apple RSS — 25 canciones tendencia
       try {
         const res = await fetch('https://rss.applemarketingtools.com/api/v2/us/music/most-popular/50/songs.json');
         const data = await res.json();
@@ -229,12 +228,10 @@ async function loadMusicByGenre(genre) {
           previewUrl: '',
           itunesUrl: s.url || '',
         }));
-        // Enriquecer con previews
         await enrichMusicPreviews(tracks);
-      } catch (e) { /* fallback abajo */ }
+      } catch (e) { /* fallback */ }
     }
 
-    // Si trending falló o es un género específico, buscar en iTunes
     if (tracks.length === 0) {
       const term = MUSIC_GENRES[genre] || genre;
       const data = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=50&country=es`);
@@ -247,7 +244,6 @@ async function loadMusicByGenre(genre) {
       }));
     }
 
-    // Si todavía hay pocas, buscar más con variaciones
     if (tracks.length < 20 && genre !== 'trending') {
       const extraTerm = MUSIC_GENRES[genre] + ' 2026';
       try {
@@ -259,7 +255,6 @@ async function loadMusicByGenre(genre) {
           previewUrl: s.previewUrl,
           itunesUrl: s.trackViewUrl || '',
         }));
-        // Merge sin duplicar
         const existing = new Set(tracks.map(t => t.title + t.artist));
         extra.forEach(t => { if (!existing.has(t.title + t.artist)) tracks.push(t); });
       } catch (e) { /* ok */ }
@@ -325,7 +320,6 @@ function playMusic(i) {
   const yt = encodeURIComponent(t.title + ' ' + t.artist + ' official audio');
   document.getElementById('youtube-full-link').href = `https://www.youtube.com/results?search_query=${yt}`;
   document.getElementById('mini-title').textContent = `${t.title} — ${t.artist}`;
-
   document.getElementById('music-player').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -354,7 +348,6 @@ function setupMusicControls() {
     document.getElementById('mini-player').classList.add('hidden');
   });
 
-  // Genre chips
   document.querySelectorAll('#music-genre-filters .chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('#music-genre-filters .chip').forEach(c => c.classList.remove('active'));
@@ -383,11 +376,34 @@ async function searchMusic(query) {
   }
 }
 
-// ===================== PELÍCULAS — iTunes (tienda España = español) =====================
+// ===================== PELÍCULAS — Destacadas + iTunes (sin key) =====================
 let moviesList = [];
 let loadedMovieCategories = {};
 
+// Películas destacadas personalizadas
+const FEATURED_MOVIES = [
+  {
+    id: 1,
+    title: "The Shawshank Redemption",
+    description: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
+    year: 1994,
+    image_url: "https://devsapihub.com/img-movies/1.jpg",
+    genre: ["Drama"],
+    stars: 5
+  },
+  {
+    id: 2,
+    title: "Jumanji",
+    description: "In Jumanji: The Next Level, the gang is back but the game has changed.",
+    year: 2019,
+    image_url: "https://devsapihub.com/img-movies/2.jpg",
+    genre: ["Adventure", "Fantasy", "Comedy"],
+    stars: 3.4
+  }
+];
+
 const MOVIE_CATEGORIES = {
+  destacadas: null, // usa FEATURED_MOVIES + busca tráilers en iTunes
   ninos: ['pelicula animacion', 'pelicula infantil', 'pelicula familiar disney', 'pelicula pixar'],
   adolescentes: ['pelicula accion', 'pelicula aventura', 'pelicula superheroes', 'pelicula fantastica'],
   adultos: ['pelicula drama', 'pelicula thriller', 'pelicula comedia', 'pelicula terror'],
@@ -404,10 +420,45 @@ async function loadMoviesByCategory(cat) {
 
   container.innerHTML = '<div class="loading">🎬 Cargando películas...</div>';
 
+  // ===== Categoría DESTACADAS: usa las películas personalizadas =====
+  if (cat === 'destacadas') {
+    // Convertir formato personalizado al formato estándar
+    let movies = FEATURED_MOVIES.map(m => ({
+      title: m.title,
+      artwork: m.image_url,
+      releaseDate: String(m.year),
+      genres: m.genre.join(', '),
+      stars: m.stars,
+      description: m.description,
+      itunesUrl: '',
+      previewUrl: '', // lo buscamos abajo
+      isFeatured: true,
+    }));
+
+    // Buscar tráilers en iTunes para cada película destacada
+    await Promise.allSettled(movies.map(async m => {
+      try {
+        const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(m.title)}&media=movie&limit=1&country=es`);
+        if (d.results?.[0]) {
+          const r = d.results[0];
+          m.previewUrl = r.previewUrl || '';
+          if (!m.description || m.description === r.longDescription) {
+            // mantener la descripción original si ya tiene una
+          }
+        }
+      } catch (e) { /* skip */ }
+    }));
+
+    loadedMovieCategories[cat] = movies;
+    moviesList = movies;
+    renderMovies(container, movies);
+    return;
+  }
+
+  // ===== Otras categorías: busca en iTunes =====
   const searchTerms = MOVIE_CATEGORIES[cat] || [cat];
   let allMovies = [];
 
-  // Buscar cada término y combinar resultados
   for (const term of searchTerms) {
     try {
       const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=movie&limit=25&country=es`);
@@ -420,12 +471,12 @@ async function loadMoviesByCategory(cat) {
         artist: m.artistName || '',
         previewUrl: m.previewUrl || '',
         description: m.longDescription || m.shortDescription || '',
+        isFeatured: false,
       }));
       allMovies = allMovies.concat(movies);
     } catch (e) { /* skip */ }
   }
 
-  // Quitar duplicados
   const seen = new Set();
   allMovies = allMovies.filter(m => {
     if (seen.has(m.title)) return false;
@@ -443,20 +494,28 @@ function renderMovies(container, movies) {
     container.innerHTML = '<div class="loading">No se encontraron películas en esta categoría.</div>';
     return;
   }
-  container.innerHTML = movies.map((m, i) => `
+  container.innerHTML = movies.map((m, i) => {
+    const posterUrl = m.artwork || m.image_url || '';
+    const year = m.releaseDate?.substring(0, 4) || String(m.year || '');
+    const genres = m.genres || (Array.isArray(m.genre) ? m.genre.join(', ') : '');
+    const stars = m.stars;
+    const starsDisplay = stars ? `<span style="color:#fdcb6e;font-weight:700;">★ ${stars}</span>` : '';
+
+    return `
     <div class="movie-card" onclick="openMovieModal(${i})">
-      <img class="movie-poster" src="${m.artwork}" alt="" loading="lazy"
+      <img class="movie-poster" src="${posterUrl}" alt="" loading="lazy"
            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎬</text></svg>'">
       <div class="movie-card-info">
         <div class="movie-card-title">${m.title}</div>
         <div class="movie-card-meta">
-          <span>${m.releaseDate?.substring(0,4) || ''}</span>
-          ${m.genres ? `<span>· ${m.genres}</span>` : ''}
+          <span>${year}</span>
+          ${genres ? `<span>· ${genres}</span>` : ''}
+          ${starsDisplay}
           ${m.previewUrl ? '<span style="color:var(--accent);">▶ Tráiler</span>' : ''}
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function openMovieModal(i) {
@@ -467,19 +526,26 @@ function openMovieModal(i) {
   const body = document.getElementById('modal-body');
   modal.classList.remove('hidden');
 
-  const ytTrailer = encodeURIComponent(m.title + ' ' + (m.releaseDate?.substring(0,4) || '') + ' pelicula completa español');
-  const ytTrailerLink = encodeURIComponent(m.title + ' ' + (m.releaseDate?.substring(0,4) || '') + ' trailer español');
+  const year = m.releaseDate?.substring(0, 4) || String(m.year || '');
+  const genres = m.genres || (Array.isArray(m.genre) ? m.genre.join(', ') : '');
+  const stars = m.stars;
+  const starsDisplay = stars ? `<span style="color:#fdcb6e;font-weight:700;">★ ${stars} / 5</span>` : '';
+  const desc = m.description || 'Sin descripción disponible.';
+  const backdropUrl = (m.artwork || m.image_url || '').replace('400x600', 'w780');
+
+  const ytTrailer = encodeURIComponent(m.title + ' ' + year + ' pelicula completa español');
+  const ytTrailerLink = encodeURIComponent(m.title + ' ' + year + ' trailer español');
 
   body.innerHTML = `
-    ${m.artwork ? `<div class="modal-backdrop" style="background-image:url('${m.artwork.replace('400x600','w780')}')"></div>` : ''}
+    ${backdropUrl ? `<div class="modal-backdrop" style="background-image:url('${backdropUrl}')"></div>` : ''}
     <div class="modal-body-info">
       <h2 class="modal-title">${m.title}</h2>
       <div class="modal-meta">
-        ${m.releaseDate ? `<span>📅 ${m.releaseDate.substring(0,4)}</span>` : ''}
-        ${m.genres ? `<span>🎬 ${m.genres}</span>` : ''}
-        ${m.artist ? `<span>⭐ ${m.artist}</span>` : ''}
+        ${year ? `<span>📅 ${year}</span>` : ''}
+        ${genres ? `<span>🎬 ${genres}</span>` : ''}
+        ${starsDisplay}
       </div>
-      <p class="modal-overview">${m.description || 'Sin descripción disponible.'}</p>
+      <p class="modal-overview">${desc}</p>
       
       ${m.previewUrl ? `
         <h3 style="font-size:1rem;margin:1rem 0 0.5rem;">▶ Tráiler en Español</h3>
@@ -504,7 +570,6 @@ function openMovieModal(i) {
 }
 
 function setupMovieControls() {
-  // Categorías
   document.querySelectorAll('#movie-categories .chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('#movie-categories .chip').forEach(c => c.classList.remove('active'));
@@ -513,7 +578,6 @@ function setupMovieControls() {
     });
   });
 
-  // Búsqueda
   document.getElementById('movie-search-btn').addEventListener('click', () => {
     const q = document.getElementById('movie-search').value;
     if (q.trim()) searchMovies(q);
@@ -522,7 +586,6 @@ function setupMovieControls() {
     if (e.key === 'Enter') searchMovies(e.target.value);
   });
 
-  // Modal
   document.getElementById('close-modal').addEventListener('click', () => {
     document.getElementById('movie-modal').classList.add('hidden');
     document.getElementById('modal-body').innerHTML = '';
@@ -549,6 +612,7 @@ async function searchMovies(query) {
       artist: m.artistName || '',
       previewUrl: m.previewUrl || '',
       description: m.longDescription || m.shortDescription || '',
+      isFeatured: false,
     }));
     renderMovies(container, moviesList);
   } catch (e) {

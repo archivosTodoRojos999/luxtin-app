@@ -265,7 +265,8 @@ async function searchMusic(query) {
 // API video:  https://vsembed.ru/embed/movie/{imdb_id}
 
 const MOVIES_API = 'https://devsapihub.com/api-movies';
-const VIDSRC_BASE = 'https://vsembed.ru/embed/movie/';
+// Reproductor: multiembed.mov tiene 16 servidores (algunos con audio en español)
+  const VIDSRC_BASE = 'https://multiembed.mov/?video_id=';
 
 // Mapeo de títulos → IMDb IDs (para el reproductor VidSrc)
 const IMDB_IDS = {
@@ -438,9 +439,9 @@ function openMovieModal(i) {
   // Reproductor VidSrc (video real, sin YouTube)
   let videoHtml = '';
   if (m.imdbId) {
-    const isTV = m.title.includes('Merlina');
+    const isTV = m.originalTitle?.includes('Merlina') || m.title.includes('Merlina');
     const embedUrl = isTV
-      ? `https://vsembed.ru/embed/tv/${m.imdbId}/2/1`
+      ? `https://multiembed.mov/?video_id=${m.imdbId}&s=2&e=1`
       : `${VIDSRC_BASE}${m.imdbId}`;
 
     videoHtml = `

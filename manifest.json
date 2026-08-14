@@ -1,0 +1,11 @@
+{
+  "name": "LUXTIN",
+  "short_name": "LUXTIN",
+  "description": "Fútbol en vivo, música y películas",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0f",
+  "theme_color": "#6c5ce7",
+  "icons": []
+}

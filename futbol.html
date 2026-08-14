@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<title>LUXTIN Fútbol — Partidos en Vivo</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0a0a0f; --bg-card:#15151f; --bg-hover:#1e1e2e;
+  --primary:#6c5ce7; --primary-light:#a29bfe; --accent:#00cec9;
+  --text:#f0f0f5; --text-muted:#8888a0; --border:#2a2a3a;
+  --danger:#e74c3c; --green:#00b894; --radius:14px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+html { font-size: clamp(14px, 3.5vw, 16px); }
+body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; -webkit-font-smoothing:antialiased; }
+.hidden { display:none !important; }
+a { color:inherit; text-decoration:none; }
+
+/* SPLASH */
+.splash-screen { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:#000; animation: splashFade 0.8s ease 5.2s forwards; }
+.splash-bg { position:absolute; inset:0; background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1a 40%, #000 100%); animation: bgPulse 3s ease infinite; }
+.splash-content { position:relative; z-index:2; text-align:center; }
+.luxtin-letters { display:flex; gap:0.1em; font-size:clamp(2.5rem,10vw,5rem); font-weight:800; letter-spacing:0.05em; background:linear-gradient(135deg,#6c5ce7,#00cec9,#6c5ce7); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation: gradientShift 3s ease infinite; }
+.letter { display:inline-block; opacity:0; transform:translateY(40px) scale(0.5) rotateX(90deg); animation: letterIn 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards; animation-delay: var(--delay); }
+.luxtin-subtitle { margin-top:1.2rem; font-size:clamp(0.7rem,2.5vw,1rem); letter-spacing:0.3em; color:var(--text-muted); opacity:0; animation: fadeInUp 0.8s ease 1.2s forwards; }
+@keyframes letterIn { to { opacity:1; transform:translateY(0) scale(1) rotateX(0); } }
+@keyframes bgPulse { 0%,100%{opacity:0.8;} 50%{opacity:1;} }
+@keyframes gradientShift { 0%{background-position:0% center;} 50%{background-position:100% center;} 100%{background-position:0% center;} }
+@keyframes fadeInUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes splashFade { to { opacity:0; visibility:hidden; pointer-events:none; } }
+
+/* LAYOUT */
+.app { max-width:1000px; margin:0 auto; padding:1rem 1rem 4rem; }
+.topbar { position:sticky; top:0; z-index:100; background:rgba(10,10,15,0.95); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:0.8rem 1rem; display:flex; justify-content:space-between; align-items:center; max-width:1000px; margin:0 auto; }
+.topbar-logo { font-size:1.4rem; font-weight:800; letter-spacing:0.08em; background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.topbar-date { font-size:0.75rem; color:var(--text-muted); text-align:right; }
+.topbar-date strong { color:var(--text); display:block; font-size:0.85rem; }
+
+.section-header { margin:1.2rem 0 1rem; }
+.section-header h1 { font-size:1.6rem; font-weight:800; }
+.section-header p { color:var(--text-muted); font-size:0.85rem; margin-top:0.2rem; }
+
+/* CHIPS */
+.filter-chips { display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.6rem; margin-bottom:1rem; -webkit-overflow-scrolling:touch; }
+.filter-chips::-webkit-scrollbar { height:3px; }
+.filter-chips::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+.chip { white-space:nowrap; padding:0.45rem 1rem; background:var(--bg-card); border:1px solid var(--border); color:var(--text-muted); border-radius:20px; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.chip:hover { background:var(--bg-hover); color:var(--text); }
+.chip.active { background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:white; border-color:transparent; }
+
+/* MATCH CARDS */
+.matches-list { display:flex; flex-direction:column; gap:0.8rem; }
+.match-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; transition:all 0.3s; }
+.match-card:hover { background:var(--bg-hover); }
+.match-card.live { border-color:var(--danger); box-shadow: 0 0 0 1px rgba(231,76,60,0.3); }
+
+.match-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; }
+.match-league { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); }
+
+.live-badge { background:var(--danger); color:white; padding:0.2rem 0.6rem; border-radius:4px; font-weight:700; font-size:0.68rem; display:flex; align-items:center; gap:0.3rem; }
+.live-dot { width:6px; height:6px; background:white; border-radius:50%; animation: livePulse 1s infinite; }
+@keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.match-time { font-size:0.72rem; color:var(--text-muted); display:flex; align-items:center; gap:0.3rem; }
+
+.match-teams { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+.team { display:flex; flex-direction:column; align-items:center; gap:0.3rem; flex:1; min-width:0; }
+.team-logo { width:40px; height:40px; object-fit:contain; }
+.team-badge { width:40px; height:40px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:800; color:var(--primary-light); }
+.team-name { font-size:0.78rem; font-weight:700; text-align:center; line-height:1.2; }
+.match-score { font-size:1.3rem; font-weight:800; padding:0 0.5rem; min-width:70px; text-align:center; }
+.match-score.live { color:var(--accent); }
+.match-score.vs { color:var(--text-muted); font-size:0.85rem; }
+
+.match-footer { margin-top:0.8rem; display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+.match-date { font-size:0.72rem; color:var(--text-muted); }
+.watch-btn { background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:white; border:none; padding:0.5rem 1.2rem; border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:0.4rem; }
+.watch-btn:hover { opacity:0.9; transform:translateY(-1px); }
+.watch-btn:active { transform:translateY(0); }
+.watch-btn.secondary { background:var(--bg-hover); border:1px solid var(--border); }
+.watch-btn.disabled { opacity:0.4; pointer-events:none; }
+
+.loading { text-align:center; padding:2rem; color:var(--text-muted); font-size:0.9rem; }
+.error-msg { text-align:center; padding:1.5rem; color:var(--danger); font-size:0.85rem; }
+.btn-primary { background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:white; border:none; padding:0.7rem 1.5rem; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; margin-top:1rem; }
+.btn-primary:hover { opacity:0.9; }
+
+/* MODAL STREAM */
+.stream-modal { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; padding:1rem; animation: fadeIn 0.3s; }
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+.stream-content { background:var(--bg-card); border-radius:var(--radius); max-width:600px; width:100%; padding:1.5rem; }
+.stream-close { float:right; background:rgba(0,0,0,0.5); border:none; color:white; width:32px; height:32px; border-radius:50%; font-size:0.9rem; cursor:pointer; }
+.stream-title { font-size:1.2rem; font-weight:800; margin:0.5rem 0; }
+.stream-match { color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; }
+.stream-options { display:flex; flex-direction:column; gap:0.6rem; }
+.stream-link { background:var(--bg-hover); border:1px solid var(--border); border-radius:10px; padding:0.9rem 1rem; display:flex; align-items:center; gap:0.8rem; cursor:pointer; transition:all 0.2s; }
+.stream-link:hover { border-color:var(--primary); background:rgba(108,92,231,0.15); }
+.stream-platform { font-weight:700; font-size:0.9rem; }
+.stream-desc { font-size:0.72rem; color:var(--text-muted); }
+.stream-icon { font-size:1.3rem; }
+
+/* RESPONSIVE */
+@media (min-width:768px) {
+  .app { padding:1.5rem 2rem 4rem; }
+  .section-header h1 { font-size:2rem; }
+  .team-name { font-size:0.9rem; }
+  .team-logo, .team-badge { width:48px; height:48px; }
+  .match-score { font-size:1.5rem; }
+}
+
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" class="splash-screen">
+  <div class="splash-bg"></div>
+  <div class="splash-content">
+    <div class="luxtin-letters">
+      <span class="letter" style="--delay:0s">L</span>
+      <span class="letter" style="--delay:0.1s">U</span>
+      <span class="letter" style="--delay:0.2s">X</span>
+      <span class="letter" style="--delay:0.3s">T</span>
+      <span class="letter" style="--delay:0.4s">I</span>
+      <span class="letter" style="--delay:0.5s">N</span>
+    </div>
+    <div class="luxtin-subtitle">FÚTBOL EN VIVO</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <div class="topbar-logo">LUXTIN</div>
+    <div class="topbar-date">
+      <strong id="today-date"></strong>
+      <span id="today-time"></span>
+    </div>
+  </header>
+
+  <div class="section-header">
+    <h1>Partidos de Hoy</h1>
+    <p>Fecha y hora de cada partido · Botón para ver en vivo</p>
+  </div>
+
+  <div class="filter-chips" id="league-filters">
+    <button class="chip active" data-league="all">⚽ Todas</button>
+  </div>
+
+  <div id="matches-list" class="matches-list">
+    <div class="loading">📡 Cargando partidos del día...</div>
+  </div>
+
+  <button id="refresh-btn" class="btn-primary">🔄 Actualizar</button>
+</div>
+
+<!-- STREAM MODAL -->
+<div id="stream-modal" class="stream-modal hidden">
+  <div class="stream-content">
+    <button class="stream-close" onclick="closeStreamModal()">✕</button>
+    <div class="stream-title" id="stream-title"></div>
+    <div class="stream-match" id="stream-match"></div>
+    <div class="stream-options" id="stream-options"></div>
+  </div>
+</div>
+
+<script>
+// ===================== SPLASH =====================
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('app').classList.remove('hidden');
+    updateClock();
+    setInterval(updateClock, 1000);
+    loadMatches();
+  }, 6000);
+});
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('today-date').textContent = now.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('today-time').textContent = now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// ===================== LIGAS =====================
+const LEAGUES = [
+  { code:'arg.1', name:'Argentina' },
+  { code:'eng.1', name:'Premier League' },
+  { code:'esp.1', name:'La Liga' },
+  { code:'ita.1', name:'Serie A' },
+  { code:'ger.1', name:'Bundesliga' },
+  { code:'fra.1', name:'Ligue 1' },
+  { code:'bra.1', name:'Brasileirão' },
+  { code:'mex.1', name:'Liga MX' },
+  { code:'uefa.champions', name:'Champions League' },
+  { code:'uefa.europa', name:'Europa League' },
+  { code:'uefa.europa.conference', name:'Conference League' },
+  { code:'usa.1', name:'MLS' },
+  { code:'ned.1', name:'Eredivisie' },
+  { code:'por.1', name:'Liga Portugal' },
+  { code:'col.1', name:'Liga Colombia' },
+  { code:'chi.1', name:'Chile' },
+  { code:'uru.1', name:'Uruguay' },
+  { code:'ecu.1', name:'Ecuador' },
+];
+
+// Plataformas donde se pueden ver los partidos legalmente
+const STREAM_PLATFORMS = {
+  'arg.1': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'TV y streaming', icon:'📺' },
+    { name:'TNT Sports', url:'https://mientretenimiento.tv/', desc:'Primera División Argentina', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión en YouTube', icon:'🔴', search:true },
+  ],
+  'eng.1': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Premier League', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'esp.1': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'La Liga España', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'ita.1': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Serie A', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'ger.1': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Bundesliga', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'fra.1': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Ligue 1', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'bra.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+    { name:'Globo', url:'https://globoplay.globo.com/', desc:'Brasileirão', icon:'📺' },
+  ],
+  'mex.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+    { name:'Azteca Deportes', url:'https://www.aztecadeportes.com/', desc:'Liga MX', icon:'📺' },
+  ],
+  'uefa.champions': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Champions League', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'uefa.europa': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Europa League', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'usa.1': [
+    { name:'Apple TV - MLS Season Pass', url:'https://tv.apple.com/category/sports', desc:'MLS (algunos gratis)', icon:'⚽' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'ned.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'por.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'col.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+    { name:'Win Sports', url:'https://www.winsports.co/', desc:'Liga Colombia', icon:'📺' },
+  ],
+  'uefa.europa.conference': [
+    { name:'ESPN', url:'https://www.espn.com.ar/watch/', desc:'Conference League', icon:'📺' },
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'chi.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'uru.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+  'ecu.1': [
+    { name:'YouTube (búsqueda)', url:null, desc:'Buscar transmisión', icon:'🔴', search:true },
+  ],
+};
+
+let allMatches = [];
+let currentFilter = 'all';
+
+// ===================== CARGAR PARTIDOS =====================
+async function loadMatches() {
+  const container = document.getElementById('matches-list');
+  container.innerHTML = '<div class="loading">📡 Conectando con ESPN... cargando 18 ligas...</div>';
+  allMatches = [];
+
+  const results = await Promise.allSettled(
+    LEAGUES.map(async lg => {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg.code}/scoreboard`);
+      if (!res.ok) throw new Error();
+      return { league: lg.name, code: lg.code, data: await res.json() };
+    })
+  );
+
+  const leaguesWithData = [];
+
+  results.forEach(r => {
+    if (r.status !== 'fulfilled' || !r.value?.data?.events) return;
+    leaguesWithData.push({ name: r.value.league, code: r.value.code });
+
+    r.value.data.events.forEach(ev => {
+      const c = ev.competitions?.[0];
+      if (!c) return;
+      const home = c.competitors?.find(t => t.homeAway === 'home');
+      const away = c.competitors?.find(t => t.homeAway === 'away');
+      if (!home || !away) return;
+
+      allMatches.push({
+        league: r.value.league,
+        leagueCode: r.value.code,
+        home: home.team?.displayName || 'Local',
+        away: away.team?.displayName || 'Visitante',
+        homeScore: home.score !== '' ? home.score : null,
+        awayScore: away.score !== '' ? away.score : null,
+        homeLogo: home.team?.logo || '',
+        awayLogo: away.team?.logo || '',
+        status: c.status?.type?.name || '',
+        shortDetail: c.status?.type?.shortDetail || '',
+        date: ev.date,
+      });
+    });
+  });
+
+  // Crear chips de liga con partidos
+  createLeagueChips(leaguesWithData);
+
+  // Ordenar: en vivo primero, luego por horario
+  allMatches.sort((a, b) => {
+    const liveA = a.status === 'STATUS_IN_PROGRESS' || a.status === 'STATUS_HALFTIME';
+    const liveB = b.status === 'STATUS_IN_PROGRESS' || b.status === 'STATUS_HALFTIME';
+    if (liveA && !liveB) return -1;
+    if (!liveA && liveB) return 1;
+    return new Date(a.date || 0) - new Date(b.date || 0);
+  });
+
+  renderMatches();
+  clearTimeout(window._timer);
+  window._timer = setTimeout(loadMatches, 60000);
+}
+
+function createLeagueChips(leaguesWithData) {
+  const container = document.getElementById('league-filters');
+  const existing = container.querySelectorAll('.chip');
+  const existingLeagues = new Set(Array.from(existing).map(c => c.dataset.league));
+
+  // Agregar nuevos
+  leaguesWithData.forEach(lg => {
+    if (!existingLeagues.has(lg.code)) {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.dataset.league = lg.code;
+      chip.textContent = lg.name;
+      container.appendChild(chip);
+    }
+  });
+}
+
+function renderMatches() {
+  const container = document.getElementById('matches-list');
+  let filtered = allMatches;
+  if (currentFilter !== 'all') {
+    filtered = allMatches.filter(m => m.leagueCode === currentFilter);
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="loading">No hay partidos en esta liga hoy. Probá "Todas" o esperá al refresh (cada 60s).</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map((m, idx) => {
+    const isLive = m.status === 'STATUS_IN_PROGRESS' || m.status === 'STATUS_HALFTIME';
+    const isFinal = m.status === 'STATUS_FINAL';
+
+    // Fecha y hora
+    let dateTime = '';
+    if (m.date) {
+      const d = new Date(m.date);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const isTomorrow = d.toDateString() === new Date(now.getTime() + 86400000).toDateString();
+
+      if (isToday) {
+        dateTime = `Hoy ${d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' })}`;
+      } else if (isTomorrow) {
+        dateTime = `Mañana ${d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' })}`;
+      } else {
+        dateTime = d.toLocaleString('es-AR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      }
+    }
+
+    // Badge de estado
+    let badge;
+    if (isLive) {
+      const label = m.status === 'STATUS_HALFTIME' ? 'Descanso' : (m.shortDetail || 'EN VIVO');
+      badge = `<span class="live-badge"><span class="live-dot"></span> ${label}</span>`;
+    } else if (isFinal) {
+      badge = '<span style="color:var(--text-muted);font-weight:600;font-size:0.72rem;">Finalizado</span>';
+    } else {
+      badge = `<span style="color:var(--text-muted);font-size:0.72rem;">⏰ ${dateTime}</span>`;
+    }
+
+    const homeLogo = m.homeLogo ? `<img src="${m.homeLogo}" class="team-logo" alt="">` : `<div class="team-badge">${m.home[0]}</div>`;
+    const awayLogo = m.awayLogo ? `<img src="${m.awayLogo}" class="team-logo" alt="">` : `<div class="team-badge">${m.away[0]}</div>`;
+
+    const score = (m.homeScore !== null)
+      ? `<div class="match-score ${isLive ? 'live' : ''}">${m.homeScore} - ${m.awayScore}</div>`
+      : '<div class="match-score vs">VS</div>';
+
+    // Botón de ver partido
+    const matchIdx = allMatches.indexOf(m);
+    const watchBtn = isFinal
+      ? '<button class="watch-btn disabled">Finalizado</button>'
+      : `<button class="watch-btn" onclick="openStreamModal(${matchIdx})">▶ Ver partido</button>`;
+
+    return `
+      <div class="match-card ${isLive ? 'live' : ''}">
+        <div class="match-header">
+          <span class="match-league">${m.league}</span>
+          ${badge}
+        </div>
+        <div class="match-teams">
+          <div class="team">${homeLogo}<div class="team-name">${m.home}</div></div>
+          ${score}
+          <div class="team">${awayLogo}<div class="team-name">${m.away}</div></div>
+        </div>
+        <div class="match-footer">
+          <span class="match-date">📅 ${dateTime}</span>
+          ${watchBtn}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===================== STREAM MODAL =====================
+function openStreamModal(idx) {
+  const m = allMatches[idx];
+  if (!m) return;
+
+  document.getElementById('stream-title').textContent = '¿Dónde ver el partido?';
+  document.getElementById('stream-match').textContent = `${m.home} vs ${m.away} — ${m.league}`;
+
+  const platforms = STREAM_PLATFORMS[m.leagueCode] || [];
+  const options = document.getElementById('stream-options');
+
+  // YouTube search como fallback siempre
+  const ytQuery = encodeURIComponent(`${m.home} vs ${m.away} en vivo`);
+  const ytLink = `https://www.youtube.com/results?search_query=${ytQuery}&sp=CAMSAhAB`;
+
+  options.innerHTML = platforms.map(p => {
+    let href = p.url || '#';
+    if (p.search) {
+      href = `https://www.youtube.com/results?search_query=${encodeURIComponent(m.home + ' vs ' + m.away + ' en vivo')}&sp=CAMSAhAB`;
+    }
+    return `
+      <a href="${href}" target="_blank" class="stream-link">
+        <span class="stream-icon">${p.icon}</span>
+        <div>
+          <div class="stream-platform">${p.name}</div>
+          <div class="stream-desc">${p.desc}</div>
+        </div>
+      </a>`;
+  }).join('') + `
+    <a href="${ytLink}" target="_blank" class="stream-link">
+      <span class="stream-icon">🔴</span>
+      <div>
+        <div class="stream-platform">YouTube — Buscar en vivo</div>
+        <div class="stream-desc">Busca transmisiones en vivo en YouTube</div>
+      </div>
+    </a>
+    <a href="https://www.google.com/search?q=${encodeURIComponent(m.home + ' vs ' + m.away + ' ' + m.league + ' ver en vivo online gratis')}" target="_blank" class="stream-link">
+      <span class="stream-icon">🔍</span>
+      <div>
+        <div class="stream-platform">Google — Buscar dónde ver</div>
+        <div class="stream-desc">Encuentra todas las opciones de transmisión</div>
+      </div>
+    </a>
+  `;
+
+  document.getElementById('stream-modal').classList.remove('hidden');
+}
+
+function closeStreamModal() {
+  document.getElementById('stream-modal').classList.add('hidden');
+}
+
+// ===================== EVENTS =====================
+document.addEventListener('click', e => {
+  const chip = e.target.closest('#league-filters .chip');
+  if (chip) {
+    document.querySelectorAll('#league-filters .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.league;
+    renderMatches();
+  }
+});
+
+document.getElementById('refresh-btn').addEventListener('click', loadMatches);
+
+document.getElementById('stream-modal')?.addEventListener('click', e => {
+  if (e.target.id === 'stream-modal') closeStreamModal();
+});
+</script>
+</body>
+</html>

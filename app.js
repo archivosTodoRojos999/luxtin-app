@@ -5,7 +5,8 @@
    - ESPN:        site.api.espn.com → fútbol en vivo (15 ligas)
    - iTunes:      itunes.apple.com → música (tienda España = español)
    - Apple RSS:   rss.applemarketingtools.com → tendencias musicales
-   - DevsAPIHub:  devsapihub.com/api-movies → 30 películas reales
+   - DevsAPIHub:  devsapihub.com/api-movies → 30 películas (datos)
+   - VidSrc:      vsembed.ru → reproductor de video de las películas
    ==================================================================== */
 
 // ===================== SPLASH =====================
@@ -51,7 +52,7 @@ function jsonp(url) {
   });
 }
 
-// ===================== DEPORTES — ESPN (15 LIGAS, SIN KEY) =====================
+// ===================== DEPORTES — ESPN (15 LIGAS) =====================
 const ESPN_LEAGUES = [
   { code: 'arg.1', name: 'Argentina' },
   { code: 'eng.1', name: 'Premier League' },
@@ -93,11 +94,10 @@ async function loadAllSports() {
       const home = c.competitors?.find(t => t.homeAway === 'home');
       const away = c.competitors?.find(t => t.homeAway === 'away');
       if (!home || !away) return;
-
       allMatches.push({
         league: r.value.league,
-        home: home.team?.displayName || home.team?.name || 'Local',
-        away: away.team?.displayName || away.team?.name || 'Visitante',
+        home: home.team?.displayName || 'Local',
+        away: away.team?.displayName || 'Visitante',
         homeScore: home.score !== '' ? home.score : null,
         awayScore: away.score !== '' ? away.score : null,
         homeLogo: home.team?.logo || '',
@@ -129,47 +129,28 @@ function renderMatches() {
     const name = ESPN_LEAGUES.find(l => l.code === currentLeagueFilter)?.name;
     filtered = allMatches.filter(m => m.league === name);
   }
-
   if (filtered.length === 0) {
-    container.innerHTML = '<div class="loading">No hay partidos en esta liga ahora. Probá "Todas" o esperá al refresh automático (cada 60s).</div>';
+    container.innerHTML = '<div class="loading">No hay partidos en esta liga ahora. Probá "Todas" o esperá al refresh (cada 60s).</div>';
     return;
   }
-
   container.innerHTML = filtered.map(m => {
     const isLive = m.status === 'STATUS_IN_PROGRESS' || m.status === 'STATUS_HALFTIME';
     const isFinal = m.status === 'STATUS_FINAL';
-
     let badge;
     if (isLive) {
       const label = m.status === 'STATUS_HALFTIME' ? 'Descanso' : (m.shortDetail || 'EN VIVO');
       badge = `<span class="live-badge"><span class="live-dot"></span> ${label}</span>`;
     } else if (isFinal) {
-      badge = `<span style="color:var(--text-muted);font-weight:600;">Finalizado</span>`;
+      badge = '<span style="color:var(--text-muted);font-weight:600;">Finalizado</span>';
     } else if (m.date) {
       badge = `<span style="color:var(--text-muted);">${new Date(m.date).toLocaleString('es-AR', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>`;
     } else {
       badge = '<span style="color:var(--text-muted);">Próximo</span>';
     }
-
     const homeLogo = m.homeLogo ? `<img src="${m.homeLogo}" class="team-logo" alt="">` : `<div class="team-badge">${m.home[0]}</div>`;
     const awayLogo = m.awayLogo ? `<img src="${m.awayLogo}" class="team-logo" alt="">` : `<div class="team-badge">${m.away[0]}</div>`;
-
-    const score = (m.homeScore !== null)
-      ? `<div class="match-score ${isLive ? 'live' : ''}">${m.homeScore} - ${m.awayScore}</div>`
-      : `<div class="match-score" style="color:var(--text-muted);font-size:0.9rem;">VS</div>`;
-
-    return `
-      <div class="match-card ${isLive ? 'live' : ''}">
-        <div class="match-header">
-          <span class="match-league">${m.league}</span>
-          ${badge}
-        </div>
-        <div class="match-teams">
-          <div class="team">${homeLogo}<div class="team-name">${m.home}</div></div>
-          ${score}
-          <div class="team">${awayLogo}<div class="team-name">${m.away}</div></div>
-        </div>
-      </div>`;
+    const score = (m.homeScore !== null) ? `<div class="match-score ${isLive ? 'live' : ''}">${m.homeScore} - ${m.awayScore}</div>` : '<div class="match-score" style="color:var(--text-muted);font-size:0.9rem;">VS</div>';
+    return `<div class="match-card ${isLive ? 'live' : ''}"><div class="match-header"><span class="match-league">${m.league}</span>${badge}</div><div class="match-teams"><div class="team">${homeLogo}<div class="team-name">${m.home}</div></div>${score}<div class="team">${awayLogo}<div class="team-name">${m.away}</div></div></div></div>`;
   }).join('');
 }
 
@@ -190,171 +171,83 @@ let currentMusicIndex = -1;
 let loadedGenres = {};
 
 const MUSIC_GENRES = {
-  trending: null,
-  pop: 'musica pop',
-  reggaeton: 'reggaeton',
-  rock: 'rock en español',
-  electronica: 'musica electronica',
-  'hip hop': 'hip hop',
-  cumbia: 'cumbia',
-  salsa: 'salsa',
-  bachata: 'bachata',
-  romantica: 'balada romantica',
-  rap: 'rap en español',
-  trap: 'trap latino',
+  trending: null, pop: 'musica pop', reggaeton: 'reggaeton', rock: 'rock en español',
+  electronica: 'musica electronica', 'hip hop': 'hip hop', cumbia: 'cumbia',
+  salsa: 'salsa', bachata: 'bachata', romantica: 'balada romantica', rap: 'rap en español', trap: 'trap latino',
 };
 
 async function loadMusicByGenre(genre) {
   const container = document.getElementById('music-grid');
-  if (loadedGenres[genre]) {
-    musicPlaylist = loadedGenres[genre];
-    renderMusicCards(container, musicPlaylist);
-    return;
-  }
-
+  if (loadedGenres[genre]) { musicPlaylist = loadedGenres[genre]; renderMusicCards(container, musicPlaylist); return; }
   container.innerHTML = '<div class="loading">🎵 Cargando canciones...</div>';
-
   try {
     let tracks = [];
-
     if (genre === 'trending') {
       try {
         const res = await fetch('https://rss.applemarketingtools.com/api/v2/us/music/most-popular/50/songs.json');
         const data = await res.json();
-        tracks = (data.feed?.results || []).map(s => ({
-          title: s.name,
-          artist: s.artistName,
-          artwork: (s.artworkUrl100 || '').replace('100x100', '300x300'),
-          previewUrl: '',
-          itunesUrl: s.url || '',
-        }));
+        tracks = (data.feed?.results || []).map(s => ({ title: s.name, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: '', itunesUrl: s.url||'' }));
         await enrichMusicPreviews(tracks);
-      } catch (e) { /* fallback */ }
+      } catch (e) {}
     }
-
     if (tracks.length === 0) {
       const term = MUSIC_GENRES[genre] || genre;
       const data = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=50&country=es`);
-      tracks = (data.results || []).filter(s => s.previewUrl).map(s => ({
-        title: s.trackName,
-        artist: s.artistName,
-        artwork: (s.artworkUrl100 || '').replace('100x100', '300x300'),
-        previewUrl: s.previewUrl,
-        itunesUrl: s.trackViewUrl || '',
-      }));
+      tracks = (data.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
     }
-
     if (tracks.length < 20 && genre !== 'trending') {
-      const extraTerm = MUSIC_GENRES[genre] + ' 2026';
       try {
-        const data2 = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(extraTerm)}&media=music&limit=25&country=es`);
-        const extra = (data2.results || []).filter(s => s.previewUrl).map(s => ({
-          title: s.trackName,
-          artist: s.artistName,
-          artwork: (s.artworkUrl100 || '').replace('100x100', '300x300'),
-          previewUrl: s.previewUrl,
-          itunesUrl: s.trackViewUrl || '',
-        }));
-        const existing = new Set(tracks.map(t => t.title + t.artist));
-        extra.forEach(t => { if (!existing.has(t.title + t.artist)) tracks.push(t); });
-      } catch (e) { /* ok */ }
+        const data2 = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(MUSIC_GENRES[genre]+' 2026')}&media=music&limit=25&country=es`);
+        const extra = (data2.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
+        const ex = new Set(tracks.map(t => t.title+t.artist));
+        extra.forEach(t => { if (!ex.has(t.title+t.artist)) tracks.push(t); });
+      } catch (e) {}
     }
-
     loadedGenres[genre] = tracks;
     musicPlaylist = tracks;
     renderMusicCards(container, tracks);
   } catch (err) {
-    console.error('Error cargando música:', err);
-    container.innerHTML = '<div class="loading">Error al cargar. Tocá otra categoría o reintentá.</div>';
+    container.innerHTML = '<div class="loading">Error al cargar. Reintentá.</div>';
   }
 }
 
 async function enrichMusicPreviews(tracks) {
   for (let i = 0; i < tracks.length; i += 8) {
-    const batch = tracks.slice(i, i + 8);
-    await Promise.allSettled(batch.map(async t => {
+    await Promise.allSettled(tracks.slice(i, i+8).map(async t => {
       if (t.previewUrl) return;
-      try {
-        const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(t.title + ' ' + t.artist)}&media=music&limit=1`);
-        if (d.results?.[0]?.previewUrl) t.previewUrl = d.results[0].previewUrl;
-      } catch (e) {}
+      try { const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(t.title+' '+t.artist)}&media=music&limit=1`); if (d.results?.[0]?.previewUrl) t.previewUrl = d.results[0].previewUrl; } catch (e) {}
     }));
   }
 }
 
 function renderMusicCards(container, tracks) {
-  if (!tracks || tracks.length === 0) {
-    container.innerHTML = '<div class="loading">No se encontraron canciones.</div>';
-    return;
-  }
-  container.innerHTML = tracks.map((t, i) => `
-    <div class="music-card" onclick="playMusic(${i})">
-      <img class="music-thumb" src="${t.artwork}" alt="" loading="lazy"
-           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22><rect fill=%22%231e1e2e%22 width=%22300%22 height=%22300%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎵</text></svg>'">
-      <div class="music-info">
-        <div class="music-title">${t.title}</div>
-        <div class="music-channel">${t.artist}</div>
-      </div>
-    </div>
-  `).join('');
+  if (!tracks?.length) { container.innerHTML = '<div class="loading">No se encontraron canciones.</div>'; return; }
+  container.innerHTML = tracks.map((t, i) => `<div class="music-card" onclick="playMusic(${i})"><img class="music-thumb" src="${t.artwork}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22><rect fill=%22%231e1e2e%22 width=%22300%22 height=%22300%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎵</text></svg>'"><div class="music-info"><div class="music-title">${t.title}</div><div class="music-channel">${t.artist}</div></div></div>`).join('');
 }
 
 function playMusic(i) {
   if (i < 0 || i >= musicPlaylist.length) return;
   currentMusicIndex = i;
   const t = musicPlaylist[i];
-
   document.getElementById('music-player').classList.remove('hidden');
   document.getElementById('now-playing-title').textContent = t.title;
   document.getElementById('now-playing-channel').textContent = t.artist;
   document.getElementById('player-artwork').src = t.artwork;
-
   const audio = document.getElementById('audio-preview');
-  if (t.previewUrl) {
-    audio.src = t.previewUrl;
-    audio.play().catch(() => {});
-  } else {
-    audio.removeAttribute('src');
-  }
-
-  const yt = encodeURIComponent(t.title + ' ' + t.artist + ' official audio');
-  document.getElementById('youtube-full-link').href = `https://www.youtube.com/results?search_query=${yt}`;
+  if (t.previewUrl) { audio.src = t.previewUrl; audio.play().catch(()=>{}); } else { audio.removeAttribute('src'); }
+  document.getElementById('youtube-full-link').href = `https://www.youtube.com/results?search_query=${encodeURIComponent(t.title+' '+t.artist+' official audio')}`;
   document.getElementById('mini-title').textContent = `${t.title} — ${t.artist}`;
   document.getElementById('music-player').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function setupMusicControls() {
-  document.getElementById('music-search-btn').addEventListener('click', () => {
-    const q = document.getElementById('music-search').value;
-    if (q.trim()) searchMusic(q);
-  });
-  document.getElementById('music-search').addEventListener('keypress', e => {
-    if (e.key === 'Enter') searchMusic(e.target.value);
-  });
-
-  document.getElementById('next-track').addEventListener('click', () => {
-    if (currentMusicIndex < musicPlaylist.length - 1) playMusic(currentMusicIndex + 1);
-  });
-  document.getElementById('prev-track').addEventListener('click', () => {
-    if (currentMusicIndex > 0) playMusic(currentMusicIndex - 1);
-  });
-
-  document.getElementById('minimize-player').addEventListener('click', () => {
-    document.getElementById('music-player').classList.add('hidden');
-    document.getElementById('mini-player').classList.remove('hidden');
-  });
-  document.getElementById('expand-player').addEventListener('click', () => {
-    document.getElementById('music-player').classList.remove('hidden');
-    document.getElementById('mini-player').classList.add('hidden');
-  });
-
-  document.querySelectorAll('#music-genre-filters .chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('#music-genre-filters .chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      loadMusicByGenre(chip.dataset.genre);
-    });
-  });
+  document.getElementById('music-search-btn').addEventListener('click', () => { const q = document.getElementById('music-search').value; if (q.trim()) searchMusic(q); });
+  document.getElementById('music-search').addEventListener('keypress', e => { if (e.key === 'Enter') searchMusic(e.target.value); });
+  document.getElementById('next-track').addEventListener('click', () => { if (currentMusicIndex < musicPlaylist.length-1) playMusic(currentMusicIndex+1); });
+  document.getElementById('prev-track').addEventListener('click', () => { if (currentMusicIndex > 0) playMusic(currentMusicIndex-1); });
+  document.getElementById('minimize-player').addEventListener('click', () => { document.getElementById('music-player').classList.add('hidden'); document.getElementById('mini-player').classList.remove('hidden'); });
+  document.getElementById('expand-player').addEventListener('click', () => { document.getElementById('music-player').classList.remove('hidden'); document.getElementById('mini-player').classList.add('hidden'); });
+  document.querySelectorAll('#music-genre-filters .chip').forEach(chip => { chip.addEventListener('click', () => { document.querySelectorAll('#music-genre-filters .chip').forEach(c => c.classList.remove('active')); chip.classList.add('active'); loadMusicByGenre(chip.dataset.genre); }); });
 }
 
 async function searchMusic(query) {
@@ -362,36 +255,57 @@ async function searchMusic(query) {
   container.innerHTML = '<div class="loading">🔍 Buscando...</div>';
   try {
     const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=50&country=es`);
-    const tracks = (d.results || []).filter(s => s.previewUrl).map(s => ({
-      title: s.trackName,
-      artist: s.artistName,
-      artwork: (s.artworkUrl100 || '').replace('100x100', '300x300'),
-      previewUrl: s.previewUrl,
-      itunesUrl: s.trackViewUrl || '',
-    }));
-    musicPlaylist = tracks;
-    renderMusicCards(container, tracks);
-  } catch (e) {
-    container.innerHTML = '<div class="loading">Error en la búsqueda. Reintentá.</div>';
-  }
+    musicPlaylist = (d.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
+    renderMusicCards(container, musicPlaylist);
+  } catch (e) { container.innerHTML = '<div class="loading">Error en la búsqueda.</div>'; }
 }
 
-// ===================== PELÍCULAS — DevsAPIHub (30 películas reales) =====================
-// API: https://devsapihub.com/api-movies
-// Endpoints:
-//   GET /api-movies              → todas
-//   GET /api-movies/genre/:g     → filtra por género (coma para varios)
-//   GET /api-movies/year/:year   → filtra por año
-//   GET /api-movies/stars/:stars → filtra por calificación
+// ===================== PELÍCULAS — DevsAPIHub + VidSrc (video real) =====================
+// API datos:  https://devsapihub.com/api-movies
+// API video:  https://vsembed.ru/embed/movie/{imdb_id}
 
 const MOVIES_API = 'https://devsapihub.com/api-movies';
+const VIDSRC_BASE = 'https://vsembed.ru/embed/movie/';
+
+// Mapeo de títulos → IMDb IDs (para el reproductor VidSrc)
+const IMDB_IDS = {
+  'The Shawshank Redemption': 'tt0111161',
+  'Jumanji': 'tt7975244',
+  'The Godfather': 'tt0068646',
+  'The Godfather: Part II': 'tt0071562',
+  'The Dark Knight': 'tt0468569',
+  '12 Angry Men': 'tt0050083',
+  'No Hard Feelings': 'tt16673852',
+  'The Lord of the Rings: The Return of the King': 'tt0167260',
+  'Pulp Fiction': 'tt0110912',
+  'The Good, the Bad and the Ugly': 'tt0060196',
+  'The Lord of the Rings: The Fellowship of the Ring': 'tt0120737',
+  'Fight Club': 'tt0137523',
+  'Dune: Part Two': 'tt15239678',
+  'Oppenheimer': 'tt15398776',
+  'Barbie': 'tt1517268',
+  'Spider-Man: No Way Home': 'tt10872600',
+  'Avatar: The Way of Water': 'tt1630029',
+  'The Batman': 'tt1877830',
+  'Everything Everywhere All at Once': 'tt6710474',
+  'The Matrix': 'tt0133093',
+  'Mi Villano Favorito 4': 'tt7510282',
+  'Hotel Transylvania 2': 'tt2510894',
+  'Merlina - Temporada 2': 'tt13443470',
+  'Super Mario Bros. La Película': 'tt6718170',
+  'Moana 2': 'tt13622970',
+  'Toy Story 4': 'tt1979376',
+  'El Botín': 'tt32642706',
+  'Apex': 'tt16431404',
+  'Máquina de Guerra': 'tt15940132',
+  'Una batalla tras otra': 'tt30144839',
+};
 
 let moviesList = [];
 let loadedMovieCategories = {};
 
-// Mapeo de categorías a géneros de la API
 const MOVIE_CATEGORY_GENRES = {
-  destacadas: null, // todas las películas
+  destacadas: null,
   ninos: 'Animation,Family,Comedy,Adventure,Fantasy',
   adolescentes: 'Action,Adventure,Sci-Fi,Fantasy,Thriller,Suspense',
   adultos: 'Drama,Crime,Biography,Western,History,Romance,Dark Comedy,Science Fiction',
@@ -399,91 +313,48 @@ const MOVIE_CATEGORY_GENRES = {
 
 async function loadMoviesByCategory(cat) {
   const container = document.getElementById('movies-grid');
-
-  if (loadedMovieCategories[cat]) {
-    moviesList = loadedMovieCategories[cat];
-    renderMovies(container, moviesList);
-    return;
-  }
-
+  if (loadedMovieCategories[cat]) { moviesList = loadedMovieCategories[cat]; renderMovies(container, moviesList); return; }
   container.innerHTML = '<div class="loading">🎬 Cargando películas...</div>';
-
   try {
     let url;
-    if (cat === 'destacadas') {
-      // Todas las películas
-      url = MOVIES_API;
-    } else {
-      // Filtrar por género
-      const genres = MOVIE_CATEGORY_GENRES[cat] || cat;
-      url = `${MOVIES_API}/genre/${genres}`;
-    }
-
+    if (cat === 'destacadas') { url = MOVIES_API; }
+    else { url = `${MOVIES_API}/genre/${MOVIE_CATEGORY_GENRES[cat] || cat}`; }
     const res = await fetch(url);
-    if (!res.ok) throw new Error('API error: ' + res.status);
+    if (!res.ok) throw new Error('API error');
     const data = await res.json();
-
-    // La API devuelve el formato: { id, title, description, year, image_url, genre:[], stars }
     moviesList = data.map(m => ({
-      id: m.id,
-      title: m.title,
-      description: m.description,
-      year: m.year,
-      image_url: m.image_url,
-      genre: m.genre,
-      stars: m.stars,
+      id: m.id, title: m.title, description: m.description, year: m.year,
+      image_url: m.image_url, genre: m.genre, stars: m.stars,
+      imdbId: IMDB_IDS[m.title] || null,
     }));
-
     loadedMovieCategories[cat] = moviesList;
     renderMovies(container, moviesList);
   } catch (err) {
-    console.error('Error cargando películas:', err);
-    // Fallback: intentar con todas
+    console.error('Error:', err);
     try {
       const res = await fetch(MOVIES_API);
       const data = await res.json();
-      moviesList = data.map(m => ({
-        id: m.id, title: m.title, description: m.description,
-        year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars,
-      }));
+      moviesList = data.map(m => ({ id: m.id, title: m.title, description: m.description, year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars, imdbId: IMDB_IDS[m.title] || null }));
       loadedMovieCategories[cat] = moviesList;
       renderMovies(container, moviesList);
-    } catch (err2) {
-      container.innerHTML = '<div class="loading">Error al cargar películas. Reintentá más tarde.</div>';
-    }
+    } catch (e) { container.innerHTML = '<div class="loading">Error al cargar. Reintentá.</div>'; }
   }
 }
 
 function renderMovies(container, movies) {
-  if (!movies || movies.length === 0) {
-    container.innerHTML = '<div class="loading">No se encontraron películas en esta categoría.</div>';
-    return;
-  }
+  if (!movies?.length) { container.innerHTML = '<div class="loading">No se encontraron películas.</div>'; return; }
   container.innerHTML = movies.map((m, i) => {
     const year = String(m.year || '');
     const genres = Array.isArray(m.genre) ? m.genre.join(', ') : '';
     const stars = m.stars || 0;
-
-    return `
-    <div class="movie-card" onclick="openMovieModal(${i})">
-      <img class="movie-poster" src="${m.image_url}" alt="${m.title}" loading="lazy"
-           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎬</text></svg>'">
-      <div class="movie-card-info">
-        <div class="movie-card-title">${m.title}</div>
-        <div class="movie-card-meta">
-          <span>${year}</span>
-          ${genres ? `<span>· ${genres}</span>` : ''}
-          <span style="color:#fdcb6e;font-weight:700;">★ ${stars}</span>
-        </div>
-      </div>
-    </div>`;
+    const hasVideo = m.imdbId ? '<span style="color:var(--accent);">▶ Ver online</span>' : '';
+    return `<div class="movie-card" onclick="openMovieModal(${i})"><img class="movie-poster" src="${m.image_url}" alt="${m.title}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎬</text></svg>'"><div class="movie-card-info"><div class="movie-card-title">${m.title}</div><div class="movie-card-meta"><span>${year}</span>${genres?`<span>· ${genres}</span>`:''}<span style="color:#fdcb6e;font-weight:700;">★ ${stars}</span>${hasVideo}</div></div></div>`;
   }).join('');
 }
 
 function openMovieModal(i) {
   const m = moviesList[i];
   if (!m) return;
-
   const modal = document.getElementById('movie-modal');
   const body = document.getElementById('modal-body');
   modal.classList.remove('hidden');
@@ -493,7 +364,7 @@ function openMovieModal(i) {
   const stars = m.stars || 0;
   const desc = m.description || 'Sin descripción disponible.';
 
-  // Crear estrellas visuales
+  // Sistema de estrellas visual
   const fullStars = Math.floor(stars);
   const hasHalf = (stars % 1) >= 0.5;
   let starsHtml = '';
@@ -503,9 +374,33 @@ function openMovieModal(i) {
     else starsHtml += '<span style="color:#555;">★</span>';
   }
 
-  // Links a YouTube
   const ytTrailer = encodeURIComponent(m.title + ' ' + year + ' tráiler español');
   const ytFull = encodeURIComponent(m.title + ' ' + year + ' pelicula completa español');
+
+  // Reproductor VidSrc si tenemos el IMDb ID
+  let videoHtml = '';
+  if (m.imdbId) {
+    // Merlina es serie de TV → formato diferente
+    const isTV = m.title.includes('Merlina');
+    const embedUrl = isTV
+      ? `https://vsembed.ru/embed/tv/${m.imdbId}/2/1`
+      : `${VIDSRC_BASE}${m.imdbId}`;
+
+    videoHtml = `
+      <h3 style="font-size:1rem;margin:1rem 0 0.5rem;">▶ Ver Película Online</h3>
+      <div class="trailer-container" style="position:relative;width:100%;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;">
+        <iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; fullscreen"
+          style="position:absolute;inset:0;width:100%;height:100%;border:none;"
+          scrolling="no" frameborder="0"></iframe>
+      </div>
+      <p style="color:var(--text-muted);font-size:0.72rem;margin-top:0.5rem;">
+        ⚠ Si el reproductor no carga, probá con los botones de YouTube abajo.
+        Puede mostrar publicidad antes de la película.
+      </p>
+    `;
+  } else {
+    videoHtml = '<p style="color:var(--text-muted);margin-top:1rem;">No hay reproductor disponible para esta película. Usá los botones de YouTube abajo.</p>';
+  }
 
   body.innerHTML = `
     ${m.image_url ? `<div class="modal-backdrop" style="background-image:url('${m.image_url}')"></div>` : ''}
@@ -518,13 +413,11 @@ function openMovieModal(i) {
       </div>
       <p class="modal-overview">${desc}</p>
 
+      ${videoHtml}
+
       <div style="margin-top:1.2rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
-        <a href="https://www.youtube.com/results?search_query=${ytTrailer}" target="_blank" class="btn-primary" style="text-decoration:none;">
-          🎬 Ver tráiler en YouTube
-        </a>
-        <a href="https://www.youtube.com/results?search_query=${ytFull}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">
-          🔍 Ver película completa en YouTube
-        </a>
+        <a href="https://www.youtube.com/results?search_query=${ytTrailer}" target="_blank" class="btn-primary" style="text-decoration:none;">🎬 Ver tráiler en YouTube</a>
+        <a href="https://www.youtube.com/results?search_query=${ytFull}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">🔍 Ver película en YouTube</a>
       </div>
     </div>
   `;
@@ -538,52 +431,22 @@ function setupMovieControls() {
       loadMoviesByCategory(chip.dataset.cat);
     });
   });
-
-  document.getElementById('movie-search-btn').addEventListener('click', () => {
-    const q = document.getElementById('movie-search').value;
-    if (q.trim()) searchMovies(q);
-  });
-  document.getElementById('movie-search').addEventListener('keypress', e => {
-    if (e.key === 'Enter') searchMovies(e.target.value);
-  });
-
-  document.getElementById('close-modal').addEventListener('click', () => {
-    document.getElementById('movie-modal').classList.add('hidden');
-    document.getElementById('modal-body').innerHTML = '';
-  });
-  document.getElementById('movie-modal').addEventListener('click', e => {
-    if (e.target.id === 'movie-modal') {
-      document.getElementById('movie-modal').classList.add('hidden');
-      document.getElementById('modal-body').innerHTML = '';
-    }
-  });
+  document.getElementById('movie-search-btn').addEventListener('click', () => { const q = document.getElementById('movie-search').value; if (q.trim()) searchMovies(q); });
+  document.getElementById('movie-search').addEventListener('keypress', e => { if (e.key === 'Enter') searchMovies(e.target.value); });
+  document.getElementById('close-modal').addEventListener('click', () => { document.getElementById('movie-modal').classList.add('hidden'); document.getElementById('modal-body').innerHTML = ''; });
+  document.getElementById('movie-modal').addEventListener('click', e => { if (e.target.id === 'movie-modal') { document.getElementById('movie-modal').classList.add('hidden'); document.getElementById('modal-body').innerHTML = ''; } });
 }
 
 async function searchMovies(query) {
   const container = document.getElementById('movies-grid');
-  container.innerHTML = '<div class="loading">🔍 Buscando películas...</div>';
+  container.innerHTML = '<div class="loading">🔍 Buscando...</div>';
   try {
-    // La API no tiene búsqueda por texto, así que traemos todas y filtramos
     const res = await fetch(MOVIES_API);
     const data = await res.json();
     const q = query.toLowerCase();
-    moviesList = data.filter(m =>
-      m.title.toLowerCase().includes(q) ||
-      (Array.isArray(m.genre) && m.genre.some(g => g.toLowerCase().includes(q)))
-    ).map(m => ({
-      id: m.id, title: m.title, description: m.description,
-      year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars,
-    }));
-
-    // Quitar chip activo de categorías
+    moviesList = data.filter(m => m.title.toLowerCase().includes(q) || (Array.isArray(m.genre) && m.genre.some(g => g.toLowerCase().includes(q)))).map(m => ({ id: m.id, title: m.title, description: m.description, year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars, imdbId: IMDB_IDS[m.title] || null }));
     document.querySelectorAll('#movie-categories .chip').forEach(c => c.classList.remove('active'));
-
-    if (moviesList.length === 0) {
-      container.innerHTML = '<div class="loading">No se encontraron películas para "' + query + '".</div>';
-    } else {
-      renderMovies(container, moviesList);
-    }
-  } catch (e) {
-    container.innerHTML = '<div class="loading">Error en la búsqueda. Reintentá.</div>';
-  }
+    if (moviesList.length === 0) { container.innerHTML = '<div class="loading">No se encontraron películas para "' + query + '".</div>'; }
+    else { renderMovies(container, moviesList); }
+  } catch (e) { container.innerHTML = '<div class="loading">Error en la búsqueda.</div>'; }
 }

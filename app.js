@@ -5,7 +5,7 @@
    - ESPN:        site.api.espn.com → fútbol en vivo (15 ligas)
    - iTunes:      itunes.apple.com → música (tienda España = español)
    - Apple RSS:   rss.applemarketingtools.com → tendencias musicales
-   - DevsAPIHub:  devsapihub.com/api-movies → 30 películas (datos)
+   - MOVIES_DB:  80+ películas locales en español
    - VidSrc:      vsembed.ru → reproductor de video de las películas
    ==================================================================== */
 
@@ -260,157 +260,38 @@ async function searchMusic(query) {
   } catch (e) { container.innerHTML = '<div class="loading">Error en la búsqueda.</div>'; }
 }
 
-// ===================== PELÍCULAS — DevsAPIHub + VidSrc (video real) =====================
-// API datos:  https://devsapihub.com/api-movies
-// API video:  https://vsembed.ru/embed/movie/{imdb_id}
+// ===================== PELÍCULAS — Base de datos local (80+ películas) =====================
+// Usa MOVIES_DB de movie-database.js — todo en español, con IMDb IDs para multiembed.mov
 
-const MOVIES_API = 'https://devsapihub.com/api-movies';
-// Reproductor: multiembed.mov tiene 16 servidores (algunos con audio en español)
-  const VIDSRC_BASE = 'https://multiembed.mov/?video_id=';
-
-// Mapeo de títulos → IMDb IDs (para el reproductor VidSrc)
-const IMDB_IDS = {
-  'The Shawshank Redemption': 'tt0111161',
-  'Jumanji': 'tt7975244',
-  'The Godfather': 'tt0068646',
-  'The Godfather: Part II': 'tt0071562',
-  'The Dark Knight': 'tt0468569',
-  '12 Angry Men': 'tt0050083',
-  'No Hard Feelings': 'tt16673852',
-  'The Lord of the Rings: The Return of the King': 'tt0167260',
-  'Pulp Fiction': 'tt0110912',
-  'The Good, the Bad and the Ugly': 'tt0060196',
-  'The Lord of the Rings: The Fellowship of the Ring': 'tt0120737',
-  'Fight Club': 'tt0137523',
-  'Dune: Part Two': 'tt15239678',
-  'Oppenheimer': 'tt15398776',
-  'Barbie': 'tt1517268',
-  'Spider-Man: No Way Home': 'tt10872600',
-  'Avatar: The Way of Water': 'tt1630029',
-  'The Batman': 'tt1877830',
-  'Everything Everywhere All at Once': 'tt6710474',
-  'The Matrix': 'tt0133093',
-  'Mi Villano Favorito 4': 'tt7510282',
-  'Hotel Transylvania 2': 'tt2510894',
-  'Merlina - Temporada 2': 'tt13443470',
-  'Super Mario Bros. La Película': 'tt6718170',
-  'Moana 2': 'tt13622970',
-  'Toy Story 4': 'tt1979376',
-  'El Botín': 'tt32642706',
-  'Apex': 'tt16431404',
-  'Máquina de Guerra': 'tt15940132',
-  'Una batalla tras otra': 'tt30144839',
-};
-
-// Títulos y descripciones traducidos al español
-const SPANISH_MOVIES = {
-  'The Shawshank Redemption': { titulo: 'Cadena Perpetua', descripcion: 'Dos hombres encarcelados forjan un vínculo a lo largo de los años, encontrando consuelo y eventual redención a través de actos de decencia común.' },
-  'Jumanji': { titulo: 'Jumanji: Siguiente Nivel', descripcion: 'En Jumanji: Siguiente Nivel, el grupo está de vuelta pero el juego ha cambiado.' },
-  'The Godfather': { titulo: 'El Padrino', descripcion: 'La saga de la familia Corleone, una de las dinastías del crimen más poderosas de la mafia italiana en Estados Unidos.' },
-  'The Godfather: Part II': { titulo: 'El Padrino: Parte II', descripcion: 'La continuación de la saga Corleone, mostrando el ascenso de Michael como jefe de la familia y los orígenes de su padre Vito.' },
-  'The Dark Knight': { titulo: 'Batman: El Caballero de la Noche', descripcion: 'Batman se enfrenta al Joker, un criminal caótico que siembra el terror en Gotham y pone a prueba los límites de la justicia.' },
-  '12 Angry Men': { titulo: '12 Hombres sin Piedad', descripcion: 'Doce jurados deben decidir el destino de un joven acusado de asesinato. Uno de ellos cuestiona las evidencias y desafía al resto.' },
-  'No Hard Feelings': { titulo: 'Sin Filtros', descripcion: 'Una joven acepta un trabajo inusual: salir con el hijo tímido de unos padres antes de que vaya a la universidad.' },
-  'The Lord of the Rings: The Return of the King': { titulo: 'El Señor de los Anillos: El Retorno del Rey', descripcion: 'Frodo y Sam continúan su viaje hacia el Monte del Destino para destruir el Anillo mientras la última batalla por la Tierra Media se libra.' },
-  'Pulp Fiction': { titulo: 'Tiempos Violentos', descripcion: 'Las vidas de dos sicarios, un boxeador, la esposa de un gánster y dos asaltantes se entrelazan en cuatro historias de violencia y redención.' },
-  'The Good, the Bad and the Ugly': { titulo: 'El Bueno, el Feo y el Malo', descripcion: 'Tres pistoleros rivales buscan un tesoro enterrado durante la Guerra Civil estadounidense, formando alianzas y traiciones.' },
-  'The Lord of the Rings: The Fellowship of the Ring': { titulo: 'El Señor de los Anillos: La Comunidad del Anillo', descripcion: 'Un joven hobbit hereda un anillo mágico y emprende un viaje épico para destruirlo antes de que caiga en manos del Señor Oscuro.' },
-  'Fight Club': { titulo: 'El Club de la Pelea', descripcion: 'Un oficinista insomne conoce a un vendedor carismático y juntos fundan un club de lucha underground que se convierte en algo mucho más grande.' },
-  'Dune: Part Two': { titulo: 'Dune: Parte Dos', descripcion: 'Paul Atreides se une a los Fremen para vengar a su familia y detener la destrucción del planeta desértico Arrakis.' },
-  'Oppenheimer': { titulo: 'Oppenheimer', descripcion: 'La historia del físico J. Robert Oppenheimer y su rol en el desarrollo de la bomba atómica durante la Segunda Guerra Mundial.' },
-  'Barbie': { titulo: 'Barbie', descripcion: 'Barbie y Ken viven en un mundo perfecto, pero cuando tienen la oportunidad de ir al mundo real, descubren que la vida no es tan perfecta como imaginaban.' },
-  'Spider-Man: No Way Home': { titulo: 'Spider-Man: Sin Camino a Casa', descripcion: 'Tras ser revelada su identidad, Peter Parker pide ayuda al Doctor Strange, pero un hechizo sale mal y abre el multiverso.' },
-  'Avatar: The Way of Water': { titulo: 'Avatar: El Camino del Agua', descripcion: 'Jake Sully y Neytiri forman una familia en Pandora, pero deben proteger su hogar de una nueva amenaza humana.' },
-  'The Batman': { titulo: 'Batman', descripcion: 'En su segundo año luchando contra el crimen, Batman investiga una serie de asesinatos cometidos por el Acertijo que revelan secretos de Gotham.' },
-  'Everything Everywhere All at Once': { titulo: 'Todo a la Vez en Todas Partes', descripcion: 'Una inmigrante china descubre que debe conectar con versiones de sí misma en universos paralelos para salvar la existencia.' },
-  'The Matrix': { titulo: 'Matrix', descripcion: 'Un hacker descubre que la realidad es una simulación creada por máquinas y se une a la resistencia para liberar a la humanidad.' },
-  'Mi Villano Favorito 4': { titulo: 'Mi Villano Favorito 4', descripcion: 'Gru y su familia enfrentan nuevos desafíos cuando un nuevo villano amenaza la ciudad y sus hijos crecen.' },
-  'Hotel Transylvania 2': { titulo: 'Hotel Transylvania 2', descripcion: 'Drácula intenta enseñar a su nieto mitad humano, mitad vampiro a ser un monstruo mientras su hija y yerno regentan el hotel.' },
-  'Merlina - Temporada 2': { titulo: 'Merlina - Temporada 2', descripcion: 'Merlina Addams regresa a la Academia Nevermore para un nuevo año lleno de misterios, criaturas y secretos oscuros.' },
-  'Super Mario Bros. La Película': { titulo: 'Super Mario Bros. La Película', descripcion: 'Mario y Luigi son transportados a un mundo mágico donde deben unirse a la Princesa Peach para detener a Bowser.' },
-  'Moana 2': { titulo: 'Moana 2', descripcion: 'Moana emprende un nuevo viaje por los mares del Pacífico para salvar a su isla y descubrir sus raíces como navegante.' },
-  'Toy Story 4': { titulo: 'Toy Story 4', descripcion: 'Woody y el resto de los juguetes enfrentan una nueva aventura cuando un nuevo juguete llamado Forky amenaza con escapar.' },
-  'El Botín': { titulo: 'El Botín', descripcion: 'Un grupo de policías de Miami descubre un botín de millones en efectivo, lo que genera desconfianza cuando otros se enteran del decomiso.' },
-  'Apex': { titulo: 'Apex', descripcion: 'Una escaladora experta se enfrenta a la naturaleza y a una amenaza mortal en un río traicionero de montaña.' },
-  'Máquina de Guerra': { titulo: 'Máquina de Guerra', descripcion: 'Un grupo de soldados de élite descubre una fuerza mortal de otro mundo durante su última prueba de entrenamiento de operaciones especiales.' },
-  'Una batalla tras otra': { titulo: 'Una Batalla Tras Otra', descripcion: 'Un grupo de ex-revolucionarios se reúne para rescatar a la hija de uno de ellos cuando su enemigo reaparece después de 16 años.' },
-};
-
-
-// Géneros traducidos al español
-const GENRE_ES = {
-  'Drama': 'Drama', 'Crime': 'Crimen', 'Action': 'Acción', 'Adventure': 'Aventura',
-  'Fantasy': 'Fantasía', 'Comedy': 'Comedia', 'Sci-Fi': 'Ciencia Ficción',
-  'Western': 'Western', 'Biography': 'Biografía', 'History': 'Historia',
-  'Romance': 'Romance', 'Thriller': 'Suspenso', 'Suspense': 'Suspenso',
-  'Animation': 'Animación', 'Family': 'Familiar', 'Mystery': 'Misterio',
-  'Dark Comedy': 'Comedia Negra', 'Science Fiction': 'Ciencia Ficción',
-  'Survival': 'Supervivencia',
-};
-
-function traducirGeneros(genres) {
-  if (!Array.isArray(genres)) return '';
-  return genres.map(g => GENRE_ES[g] || g).join(', ');
-}
-
-let moviesList = [];
-let loadedMovieCategories = {};
-
-const MOVIE_CATEGORY_GENRES = {
-  destacadas: null,
-  ninos: 'Animation,Family,Comedy,Adventure,Fantasy',
-  adolescentes: 'Action,Adventure,Sci-Fi,Fantasy,Thriller,Suspense',
-  adultos: 'Drama,Crime,Biography,Western,History,Romance,Dark Comedy,Science Fiction',
-};
-
-async function loadMoviesByCategory(cat) {
+function loadMoviesByCategory(cat) {
   const container = document.getElementById('movies-grid');
-  if (loadedMovieCategories[cat]) { moviesList = loadedMovieCategories[cat]; renderMovies(container, moviesList); return; }
-  container.innerHTML = '<div class="loading">🎬 Cargando películas...</div>';
-  try {
-    let url;
-    if (cat === 'destacadas') { url = MOVIES_API; }
-    else { url = `${MOVIES_API}/genre/${MOVIE_CATEGORY_GENRES[cat] || cat}`; }
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('API error');
-    const data = await res.json();
-    const esp = SPANISH_MOVIES[m.title] || {};
-    moviesList = data.map(m => {
-      const esp = SPANISH_MOVIES[m.title] || {};
-      return {
-        id: m.id,
-        title: esp.titulo || m.title,
-        originalTitle: m.title,
-        description: esp.descripcion || m.description,
-        year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars,
-        imdbId: IMDB_IDS[m.title] || null,
-      };
-    });
-    loadedMovieCategories[cat] = moviesList;
-    renderMovies(container, moviesList);
-  } catch (err) {
-    console.error('Error:', err);
-    try {
-      const res = await fetch(MOVIES_API);
-      const data = await res.json();
-      moviesList = data.map(m => {
-        const esp = SPANISH_MOVIES[m.title] || {};
-        return { id: m.id, title: esp.titulo || m.title, originalTitle: m.title, description: esp.descripcion || m.description, year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars, imdbId: IMDB_IDS[m.title] || null };
-      });
-      loadedMovieCategories[cat] = moviesList;
-      renderMovies(container, moviesList);
-    } catch (e) { container.innerHTML = '<div class="loading">Error al cargar. Reintentá.</div>'; }
-  }
+  moviesList = MOVIES_DB.filter(m => m.cat === cat);
+  renderMovies(container, moviesList);
 }
 
 function renderMovies(container, movies) {
-  if (!movies?.length) { container.innerHTML = '<div class="loading">No se encontraron películas.</div>'; return; }
+  if (!movies || movies.length === 0) {
+    container.innerHTML = '<div class="loading">No se encontraron películas.</div>';
+    return;
+  }
   container.innerHTML = movies.map((m, i) => {
-    const year = String(m.year || '');
-    const genres = traducirGeneros(m.genre);
-    const stars = m.stars || 0;
-    const hasVideo = m.imdbId ? '<span style="color:var(--accent);">▶ Ver online</span>' : '';
-    return `<div class="movie-card" onclick="openMovieModal(${i})"><img class="movie-poster" src="${m.image_url}" alt="${m.title}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎬</text></svg>'"><div class="movie-card-info"><div class="movie-card-title">${m.title}</div><div class="movie-card-meta"><span>${year}</span>${genres?`<span>· ${genres}</span>`:''}<span style="color:#fdcb6e;font-weight:700;">★ ${stars}</span>${hasVideo}</div></div></div>`;
+    const genres = m.genero.join(', ');
+    return `<div class="movie-card" onclick="openMovieModal(${i})">
+      <div class="movie-poster-placeholder" style="background:linear-gradient(135deg, var(--primary), var(--accent));display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;aspect-ratio:2/3;">
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.3;">${m.titulo}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.anio}</div>
+        </div>
+      </div>
+      <div class="movie-card-info">
+        <div class="movie-card-title">${m.titulo}</div>
+        <div class="movie-card-meta">
+          <span style="color:#fdcb6e;font-weight:700;">★ ${m.estrellas}</span>
+          <span>${m.anio}</span>
+          <span>${genres}</span>
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -421,14 +302,12 @@ function openMovieModal(i) {
   const body = document.getElementById('modal-body');
   modal.classList.remove('hidden');
 
-  const year = String(m.year || '');
-  const genres = traducirGeneros(m.genre);
-  const stars = m.stars || 0;
-  const desc = m.description || 'Sin descripción disponible.';
+  const genres = m.genero.join(', ');
+  const embedUrl = `https://multiembed.mov/?video_id=${m.imdb}`;
 
   // Sistema de estrellas visual
-  const fullStars = Math.floor(stars);
-  const hasHalf = (stars % 1) >= 0.5;
+  const fullStars = Math.floor(m.estrellas);
+  const hasHalf = (m.estrellas % 1) >= 0.5;
   let starsHtml = '';
   for (let s = 0; s < 5; s++) {
     if (s < fullStars) starsHtml += '<span style="color:#fdcb6e;">★</span>';
@@ -436,15 +315,22 @@ function openMovieModal(i) {
     else starsHtml += '<span style="color:#555;">★</span>';
   }
 
-  // Reproductor VidSrc (video real, sin YouTube)
-  let videoHtml = '';
-  if (m.imdbId) {
-    const isTV = m.originalTitle?.includes('Merlina') || m.title.includes('Merlina');
-    const embedUrl = isTV
-      ? `https://multiembed.mov/?video_id=${m.imdbId}&s=2&e=1`
-      : `${VIDSRC_BASE}${m.imdbId}`;
+  body.innerHTML = `
+    <div class="modal-backdrop" style="background:linear-gradient(135deg, var(--primary), var(--accent));display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;">
+      <div>
+        <div style="font-size:1.8rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);">${m.titulo}</div>
+        <div style="font-size:0.9rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.original} (${m.anio})</div>
+      </div>
+    </div>
+    <div class="modal-body-info">
+      <h2 class="modal-title">${m.titulo}</h2>
+      <div class="modal-meta">
+        <span>📅 ${m.anio}</span>
+        <span>🎬 ${genres}</span>
+        <span>${starsHtml} ${m.estrellas}/5</span>
+      </div>
+      <p class="modal-overview">${m.desc}</p>
 
-    videoHtml = `
       <div id="player-wrapper" style="position:relative;width:100%;padding-top:56.25%;border-radius:var(--radius-sm);overflow:hidden;background:#000;margin-top:1rem;">
         <iframe id="movie-iframe" src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           style="position:absolute;inset:0;width:100%;height:100%;border:none;"
@@ -454,47 +340,25 @@ function openMovieModal(i) {
           ⛶
         </button>
       </div>
-    `;
-  } else {
-    videoHtml = '<p style="color:var(--text-muted);margin-top:1rem;">No hay reproductor disponible para esta película.</p>';
-  }
-
-  body.innerHTML = `
-    ${m.image_url ? `<div class="modal-backdrop" style="background-image:url('${m.image_url}')"></div>` : ''}
-    <div class="modal-body-info">
-      <h2 class="modal-title">${m.title}</h2>
-      <div class="modal-meta">
-        ${year ? `<span>📅 ${year}</span>` : ''}
-        ${genres ? `<span>🎬 ${genres}</span>` : ''}
-        <span>${starsHtml} ${stars}/5</span>
-      </div>
-      <p class="modal-overview">${desc}</p>
-      ${videoHtml}
+      <p style="color:var(--text-muted);font-size:0.72rem;margin-top:0.5rem;">
+        🎬 El reproductor tiene varios servidores. Si uno no tiene audio en español, probá cambiar de servidor dentro del reproductor.
+        Puede mostrar publicidad antes de la película.
+      </p>
     </div>
   `;
 }
 
 function toggleFullscreen() {
-  const iframe = document.getElementById('movie-iframe');
   const wrapper = document.getElementById('player-wrapper');
-  if (!iframe && !wrapper) return;
-  
-  const elem = wrapper || iframe;
+  if (!wrapper) return;
   if (document.fullscreenElement) {
     document.exitFullscreen();
-  } else if (elem.requestFullscreen) {
-    elem.requestFullscreen();
-  } else if (elem.webkitRequestFullscreen) {
-    elem.webkitRequestFullscreen();
-  } else if (iframe && iframe.requestFullscreen) {
-    iframe.requestFullscreen();
-  } else if (iframe && iframe.webkitRequestFullscreen) {
-    iframe.webkitRequestFullscreen();
+  } else if (wrapper.requestFullscreen) {
+    wrapper.requestFullscreen();
+  } else if (wrapper.webkitRequestFullscreen) {
+    wrapper.webkitRequestFullscreen();
   }
 }
-
-
-
 
 function setupMovieControls() {
   document.querySelectorAll('#movie-categories .chip').forEach(chip => {
@@ -504,29 +368,38 @@ function setupMovieControls() {
       loadMoviesByCategory(chip.dataset.cat);
     });
   });
-  document.getElementById('movie-search-btn').addEventListener('click', () => { const q = document.getElementById('movie-search').value; if (q.trim()) searchMovies(q); });
-  document.getElementById('movie-search').addEventListener('keypress', e => { if (e.key === 'Enter') searchMovies(e.target.value); });
-  document.getElementById('close-modal').addEventListener('click', () => { document.getElementById('movie-modal').classList.add('hidden'); document.getElementById('modal-body').innerHTML = ''; });
-  document.getElementById('movie-modal').addEventListener('click', e => { if (e.target.id === 'movie-modal') { document.getElementById('movie-modal').classList.add('hidden'); document.getElementById('modal-body').innerHTML = ''; } });
+  document.getElementById('movie-search-btn').addEventListener('click', () => {
+    const q = document.getElementById('movie-search').value;
+    if (q.trim()) searchMovies(q);
+  });
+  document.getElementById('movie-search').addEventListener('keypress', e => {
+    if (e.key === 'Enter') searchMovies(e.target.value);
+  });
+  document.getElementById('close-modal').addEventListener('click', () => {
+    document.getElementById('movie-modal').classList.add('hidden');
+    document.getElementById('modal-body').innerHTML = '';
+  });
+  document.getElementById('movie-modal').addEventListener('click', e => {
+    if (e.target.id === 'movie-modal') {
+      document.getElementById('movie-modal').classList.add('hidden');
+      document.getElementById('modal-body').innerHTML = '';
+    }
+  });
 }
 
-async function searchMovies(query) {
+function searchMovies(query) {
   const container = document.getElementById('movies-grid');
-  container.innerHTML = '<div class="loading">🔍 Buscando...</div>';
-  try {
-    const res = await fetch(MOVIES_API);
-    const data = await res.json();
-    const q = query.toLowerCase();
-    moviesList = data.filter(m => {
-        const esp = SPANISH_MOVIES[m.title] || {};
-        const tituloEsp = (esp.titulo || m.title).toLowerCase();
-        return tituloEsp.includes(q) || m.title.toLowerCase().includes(q) || (Array.isArray(m.genre) && m.genre.some(g => g.toLowerCase().includes(q)));
-      }).map(m => {
-        const esp = SPANISH_MOVIES[m.title] || {};
-        return { id: m.id, title: esp.titulo || m.title, originalTitle: m.title, description: esp.descripcion || m.description, year: m.year, image_url: m.image_url, genre: m.genre, stars: m.stars, imdbId: IMDB_IDS[m.title] || null };
-      });
-    document.querySelectorAll('#movie-categories .chip').forEach(c => c.classList.remove('active'));
-    if (moviesList.length === 0) { container.innerHTML = '<div class="loading">No se encontraron películas para "' + query + '".</div>'; }
-    else { renderMovies(container, moviesList); }
-  } catch (e) { container.innerHTML = '<div class="loading">Error en la búsqueda.</div>'; }
+  const q = query.toLowerCase();
+  moviesList = MOVIES_DB.filter(m =>
+    m.titulo.toLowerCase().includes(q) ||
+    m.original.toLowerCase().includes(q) ||
+    m.genero.some(g => g.toLowerCase().includes(q)) ||
+    m.desc.toLowerCase().includes(q)
+  );
+  document.querySelectorAll('#movie-categories .chip').forEach(c => c.classList.remove('active'));
+  if (moviesList.length === 0) {
+    container.innerHTML = '<div class="loading">No se encontraron películas para "' + query + '".</div>';
+  } else {
+    renderMovies(container, moviesList);
+  }
 }

@@ -1,21 +1,11 @@
 /* ====================================================================
-   LUXTIN APP — Lógica principal
-   Secciones: Deportes en vivo, Música (YouTube), Películas (TMDB)
+   LUXTIN APP — Lógica principal (SIN API KEYS — todo funciona de una)
+   
+   APIs usadas (todas gratuitas, sin registro, sin keys):
+   - ESPN:      site.api.espn.com    → partidos en vivo (fútbol mundial)
+   - iTunes:    itunes.apple.com     → búsqueda de música y películas
+   - Apple RSS: rss.applemarketingtools.com → tendencias de música y películas
    ==================================================================== */
-
-// ===================== CONFIG =====================
-const CONFIG = {
-  // TMDB API — gratis, registrate en https://www.themoviedb.org/settings/api
-  // Poné tu API key acá (es gratis y te la dan en 2 minutos):
-  TMDB_API_KEY: 'TU_API_KEY_AQUI', // ← REEMPLAZAR
-
-  // Football API (gratis, 100 requests/día) — https://www.football-data.org/
-  FOOTBALL_API_KEY: 'TU_FOOTBALL_KEY_AQUI', // ← REEMPLAZAR (opcional)
-};
-
-const TMDB_BASE = 'https://api.themoviedb.org/3';
-const TMDB_IMG = 'https://image.tmdb.org/t/p/w500';
-const TMDB_BACKDROP = 'https://image.tmdb.org/t/p/w780';
 
 // ===================== SPLASH → APP =====================
 window.addEventListener('load', () => {
@@ -25,19 +15,23 @@ window.addEventListener('load', () => {
     splash.style.display = 'none';
     app.classList.remove('hidden');
     initApp();
-  }, 6000); // 6 segundos exactos como pediste
+  }, 6000);
 });
 
-// ===================== NAVIGATION =====================
+// ===================== INIT =====================
 function initApp() {
   setupNav();
-  loadLiveMatches();
-  loadMovies('popular');
+  loadAllSports();
+  loadTrendingMusic();
+  loadTrendingMovies();
   setupMusicSearch();
-  setupMovieCategories();
+  setupMovieSearch();
   setupMovieModal();
+  setupMusicTabs();
+  setupMovieTabs();
 }
 
+// ===================== NAVIGATION =====================
 function setupNav() {
   const navBtns = document.querySelectorAll('.nav-btn');
   navBtns.forEach(btn => {
@@ -51,97 +45,149 @@ function setupNav() {
   });
 }
 
-// ===================== DEPORTES — PARTIDOS EN VIVO =====================
-// Usa la API gratuita de football-data.org (requiere API key gratuita)
-// Si no hay API key, usa datos de demostración reales
+// ===================== JSONP HELPER (para iTunes que no soporta CORS) =====================
+function jsonpRequest(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + Math.round(Math.random() * 1000000);
+    const script = document.createElement('script');
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + callbackName;
 
-const LEAGUE_CODES = {
-  all: null,
-  arg: 'AR_CL',    // Argentina Liga Profesional
-  eng: 'PL',       // Premier League
-  esp: 'PD',       // La Liga
-  ita: 'SA',       // Serie A
-  ger: 'BL1',      // Bundesliga
-};
+    window[callbackName] = function(data) {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
 
-let currentMatches = [];
-let currentLeague = 'all';
+    script.onerror = () => {
+      delete window[callbackName];
+      if (document.body.contains(script)) document.body.removeChild(script);
+      reject(new Error('JSONP error'));
+    };
 
-async function loadLiveMatches() {
+    document.body.appendChild(script);
+
+    // Timeout 10s
+    setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        if (document.body.contains(script)) document.body.removeChild(script);
+        reject(new Error('Timeout'));
+      }
+    }, 10000);
+  });
+}
+
+// ===================== DEPORTES — ESPN API (SIN KEY) =====================
+// ESPN tiene una API pública gratuita que no requiere autenticación
+
+const ESPN_LEAGUES = [
+  { code: 'eng.1', name: 'Premier League' },
+  { code: 'esp.1', name: 'La Liga' },
+  { code: 'ita.1', name: 'Serie A' },
+  { code: 'ger.1', name: 'Bundesliga' },
+  { code: 'arg.1', name: 'Liga Argentina' },
+  { code: 'ned.1', name: 'Eredivisie' },
+  { code: 'por.1', name: 'Liga Portugal' },
+];
+
+let allMatches = [];
+let currentLeagueFilter = 'all';
+
+async function loadAllSports() {
   const container = document.getElementById('matches-list');
   container.innerHTML = '<div class="loading">Cargando partidos en vivo...</div>';
 
+  allMatches = [];
+
   try {
-    if (CONFIG.FOOTBALL_API_KEY && CONFIG.FOOTBALL_API_KEY !== 'TU_FOOTBALL_KEY_AQUI') {
-      // ====== API REAL ======
-      const url = 'https://api.football-data.org/v4/matches';
-      const res = await fetch(url, {
-        headers: { 'X-Auth-Token': CONFIG.FOOTBALL_API_KEY }
-      });
-      if (!res.ok) throw new Error('API Error: ' + res.status);
-      const data = await res.json();
-      currentMatches = (data.matches || []).map(m => ({
-        league: m.competition?.name || 'Liga',
-        home: m.homeTeam?.name || m.homeTeam?.tla || 'Local',
-        away: m.awayTeam?.name || m.awayTeam?.tla || 'Visitante',
-        homeScore: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null,
-        awayScore: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null,
-        status: m.status || 'SCHEDULED',
-        minute: m.minute || null,
-        utcDate: m.utcDate,
-      }));
-    } else {
-      // ====== DATOS DE DEMOSTRACIÓN (cuando no hay API key) ======
-      currentMatches = getDemoMatches();
-    }
+    // Cargar todas las ligas en paralelo
+    const results = await Promise.allSettled(
+      ESPN_LEAGUES.map(async (league) => {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league.code}/scoreboard`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('ESPN error');
+        const data = await res.json();
+        return { league: league.name, events: data.events || [] };
+      })
+    );
+
+    results.forEach(result => {
+      if (result.status === 'fulfilled' && result.value.events.length > 0) {
+        result.value.events.forEach(ev => {
+          const competition = ev.competitions?.[0];
+          if (!competition) return;
+
+          const home = competition.competitors?.find(c => c.homeAway === 'home');
+          const away = competition.competitors?.find(c => c.homeAway === 'away');
+
+          if (!home || !away) return;
+
+          allMatches.push({
+            league: result.league,
+            home: home.team?.displayName || home.team?.name || 'Local',
+            away: away.team?.displayName || away.team?.name || 'Visitante',
+            homeScore: home.score !== '' ? home.score : null,
+            awayScore: away.score !== '' ? away.score : null,
+            homeLogo: home.team?.logo || '',
+            awayLogo: away.team?.logo || '',
+            status: competition.status?.type?.name || 'STATUS_SCHEDULED',
+            statusDetail: competition.status?.type?.detail || '',
+            shortDetail: competition.status?.type?.shortDetail || '',
+            date: ev.date,
+          });
+        });
+      }
+    });
 
     renderMatches();
   } catch (err) {
-    console.error('Error cargando partidos:', err);
-    currentMatches = getDemoMatches();
-    renderMatches();
-    container.innerHTML += '<p style="color:var(--text-muted);font-size:0.75rem;text-align:center;margin-top:0.5rem;">Mostrando datos de demostración. Agregá tu API key de football-data.org para datos en vivo reales.</p>';
+    console.error('Error ESPN:', err);
+    container.innerHTML = '<div class="loading">Error al cargar. Tocá "Actualizar" para reintentar.</div>';
   }
 
-  // Auto-refresh cada 60 segundos
-  setTimeout(loadLiveMatches, 60000);
-}
-
-function getDemoMatches() {
-  return [
-    { league: 'Premier League', home: 'Manchester City', away: 'Liverpool', homeScore: 2, awayScore: 1, status: 'IN_PLAY', minute: 67 },
-    { league: 'La Liga', home: 'Real Madrid', away: 'Barcelona', homeScore: null, awayScore: null, status: 'TIMED', minute: null, utcDate: new Date(Date.now() + 3600000).toISOString() },
-    { league: 'Serie A', home: 'Inter', away: 'Juventus', homeScore: 0, awayScore: 0, status: 'IN_PLAY', minute: 23 },
-    { league: 'Bundesliga', home: 'Bayern Munich', away: 'Borussia Dortmund', homeScore: 3, awayScore: 2, status: 'IN_PLAY', minute: 89 },
-    { league: 'Liga Argentina', home: 'Boca Juniors', away: 'River Plate', homeScore: null, awayScore: null, status: 'TIMED', minute: null, utcDate: new Date(Date.now() + 7200000).toISOString() },
-    { league: 'Premier League', home: 'Arsenal', away: 'Chelsea', homeScore: 1, awayScore: 1, status: 'PAUSED', minute: 45 },
-  ];
+  // Auto-refresh cada 60s
+  clearTimeout(window._sportsTimer);
+  window._sportsTimer = setTimeout(loadAllSports, 60000);
 }
 
 function renderMatches() {
   const container = document.getElementById('matches-list');
-  if (currentMatches.length === 0) {
-    container.innerHTML = '<div class="loading">No hay partidos disponibles ahora mismo.</div>';
+
+  let filtered = allMatches;
+  if (currentLeagueFilter !== 'all') {
+    const leagueName = ESPN_LEAGUES.find(l => l.code === currentLeagueFilter)?.name;
+    filtered = allMatches.filter(m => m.league === leagueName);
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="loading">No hay partidos ahora mismo en esta liga. Probá "Todas" o actualizá en unos minutos.</div>';
     return;
   }
 
-  container.innerHTML = currentMatches.map(m => {
-    const isLive = m.status === 'IN_PLAY' || m.status === 'PAUSED';
-    const homeInitial = m.home.charAt(0);
-    const awayInitial = m.away.charAt(0);
+  container.innerHTML = filtered.map(m => {
+    const isLive = m.status === 'STATUS_IN_PROGRESS' || m.status === 'STATUS_HALFTIME';
+    const isFinal = m.status === 'STATUS_FINAL';
 
-    let statusText = '';
+    let statusBadge = '';
     if (isLive) {
-      statusText = m.minute ? `${m.minute}'` : 'EN VIVO';
-      if (m.status === 'PAUSED') statusText = 'Descanso';
-    } else if (m.status === 'TIMED' && m.utcDate) {
-      const d = new Date(m.utcDate);
-      statusText = d.toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    } else if (m.status === 'FINISHED') {
-      statusText = 'Finalizado';
+      const label = m.status === 'STATUS_HALFTIME' ? 'Descanso' : (m.shortDetail || 'EN VIVO');
+      statusBadge = `<span class="live-badge"><span class="live-dot"></span> ${label}</span>`;
+    } else if (isFinal) {
+      statusBadge = `<span style="color:var(--text-muted);font-weight:600;">Finalizado</span>`;
+    } else if (m.date) {
+      const d = new Date(m.date);
+      statusBadge = `<span style="color:var(--text-muted);">${d.toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>`;
     }
 
-    const score = (m.homeScore !== null && m.awayScore !== null)
+    const homeLogo = m.homeLogo
+      ? `<img src="${m.homeLogo}" class="team-logo" alt="${m.home}">`
+      : `<div class="team-badge">${m.home.charAt(0)}</div>`;
+
+    const awayLogo = m.awayLogo
+      ? `<img src="${m.awayLogo}" class="team-logo" alt="${m.away}">`
+      : `<div class="team-badge">${m.away.charAt(0)}</div>`;
+
+    const scoreDisplay = (m.homeScore !== null && m.homeScore !== undefined)
       ? `<div class="match-score ${isLive ? 'live' : ''}">${m.homeScore} - ${m.awayScore}</div>`
       : `<div class="match-score" style="color:var(--text-muted);font-size:0.9rem;">VS</div>`;
 
@@ -149,20 +195,19 @@ function renderMatches() {
       <div class="match-card ${isLive ? 'live' : ''}">
         <div class="match-header">
           <span class="match-league">${m.league}</span>
-          ${isLive ? `<span class="live-badge"><span class="live-dot"></span> EN VIVO</span>` : `<span>${statusText}</span>`}
+          ${statusBadge}
         </div>
         <div class="match-teams">
           <div class="team">
-            <div class="team-badge">${homeInitial}</div>
+            ${homeLogo}
             <div class="team-name">${m.home}</div>
           </div>
-          ${score}
+          ${scoreDisplay}
           <div class="team">
-            <div class="team-badge">${awayInitial}</div>
+            ${awayLogo}
             <div class="team-name">${m.away}</div>
           </div>
         </div>
-        ${!isLive ? `<div class="match-status">${statusText}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -170,184 +215,128 @@ function renderMatches() {
 
 // Filtros de liga
 document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('chip') && e.target.closest('#league-filters')) {
+  if (e.target.closest('#league-filters .chip')) {
     document.querySelectorAll('#league-filters .chip').forEach(c => c.classList.remove('active'));
-    e.target.classList.add('active');
-    currentLeague = e.target.dataset.league;
-    // En una implementación con API real, esto filtraría por competition code
+    e.target.closest('.chip').classList.add('active');
+    currentLeagueFilter = e.target.closest('.chip').dataset.league;
     renderMatches();
   }
 });
 
-document.getElementById('refresh-matches')?.addEventListener('click', loadLiveMatches);
+document.getElementById('refresh-matches')?.addEventListener('click', loadAllSports);
 
-// ===================== MÚSICA — YOUTUBE =====================
-// Usa la YouTube IFrame API — totalmente legal, acceso a millones de canciones
+// ===================== MÚSICA — iTunes + Apple RSS (SIN KEY) =====================
 
-let ytPlayer = null;
-let ytReady = false;
-let currentPlaylist = [];
-let currentTrackIndex = -1;
+let musicPlaylist = [];
+let currentMusicIndex = -1;
 
-// YouTube IFrame API callback (global)
-window.onYouTubeIframeAPIReady = function() {
-  ytReady = true;
-};
-
-function createYTPlayer(videoId) {
-  const frame = document.getElementById('yt-player-frame');
-  frame.innerHTML = `<div id="yt-player-div"></div>`;
-
-  if (ytReady && window.YT) {
-    ytPlayer = new YT.Player('yt-player-div', {
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 1,
-        modestbranding: 1,
-        rel: 0,
-      },
-      events: {
-        onReady: (e) => e.target.playVideo(),
-        onStateChange: (e) => {
-          if (e.data === YT.PlayerState.ENDED) {
-            playNextTrack();
-          }
-          if (e.data === YT.PlayerState.PLAYING) {
-            document.getElementById('play-pause').textContent = '⏸';
-            document.getElementById('mini-play-pause').textContent = '⏸';
-          }
-          if (e.data === YT.PlayerState.PAUSED) {
-            document.getElementById('play-pause').textContent = '▶';
-            document.getElementById('mini-play-pause').textContent = '▶';
-          }
-        }
-      }
-    });
-  } else {
-    // Fallback: iframe simple
-    frame.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:none;"></iframe>`;
-  }
-}
-
-function playTrack(index) {
-  if (index < 0 || index >= currentPlaylist.length) return;
-  currentTrackIndex = index;
-  const track = currentPlaylist[index];
-
-  document.getElementById('music-player').classList.remove('hidden');
-  document.getElementById('now-playing-title').textContent = track.title;
-  document.getElementById('now-playing-channel').textContent = track.channel;
-
-  // Mini player
-  document.getElementById('mini-title').textContent = track.title;
-
-  createYTPlayer(track.videoId);
-}
-
-function playNextTrack() {
-  if (currentTrackIndex < currentPlaylist.length - 1) {
-    playTrack(currentTrackIndex + 1);
-  }
-}
-
-function playPrevTrack() {
-  if (currentTrackIndex > 0) {
-    playTrack(currentTrackIndex - 1);
-  }
-}
-
-function togglePlayPause() {
-  if (!ytPlayer) return;
-  if (typeof ytPlayer.getPlayerState === 'function') {
-    const state = ytPlayer.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) {
-      ytPlayer.pauseVideo();
-    } else {
-      ytPlayer.playVideo();
-    }
-  }
-}
-
-// Buscar música con YouTube Data API o búsqueda directa
-// Como la YouTube Data API requiere key, usamos un método alternativo:
-// Búsqueda mediante embed de resultados de YouTube
-async function searchMusic(query) {
-  if (!query.trim()) return;
-
-  const container = document.getElementById('music-results');
-  container.innerHTML = '<div class="loading">Buscando música...</div>';
+// Cargar tendencias de música (Apple Marketing Tools RSS — sin key)
+async function loadTrendingMusic() {
+  const container = document.getElementById('music-trending');
+  container.innerHTML = '<div class="loading">Cargando tendencias musicales...</div>';
 
   try {
-    // Usamos la API de búsqueda de YouTube sin key (método de incrustación)
-    // Esto busca en YouTube y devuelve resultados embebibles
-    // Método: usar el endpoint de búsqueda de YouTube Data API v3 (requiere API key gratuita)
-    // Alternativa: usar un proxy de búsqueda
+    const url = 'https://rss.applemarketingtools.com/api/v2/us/music/most-popular/25/songs.json';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('RSS error');
+    const data = await res.json();
 
-    // === MÉTODO CON YOUTUBE DATA API (recomendado) ===
-    // Necesitás una API key de Google Cloud (gratis, 10.000 requests/día)
-    // 1. Andá a https://console.cloud.google.com/
-    // 2. Creá un proyecto → habilitá YouTube Data API v3
-    // 3. Generá una API key
-    // 4. Reemplazá abajo
+    musicPlaylist = (data.feed?.results || []).map(song => ({
+      title: song.name,
+      artist: song.artistName,
+      artwork: song.artworkUrl100?.replace('100x100', '300x300') || '',
+      previewUrl: '', // Apple RSS no da previewUrl, lo buscamos en iTunes
+      itunesUrl: song.url || '',
+      genre: song.genres?.[0]?.name || '',
+    }));
 
-    const YT_API_KEY = 'TU_YOUTUBE_API_KEY_AQUI'; // ← REEMPLAZAR
+    // Buscar preview URLs usando iTunes Search API
+    await enrichWithPreviews(musicPlaylist);
 
-    if (YT_API_KEY !== 'TU_YOUTUBE_API_KEY_AQUI') {
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&q=${encodeURIComponent(query + ' music')}&maxResults=20&key=${YT_API_KEY}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('YouTube API Error');
-      const data = await res.json();
-
-      currentPlaylist = data.items.map(item => ({
-        videoId: item.id.videoId,
-        title: item.snippet.title,
-        channel: item.snippet.channelTitle,
-        thumb: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
-      })).filter(t => t.videoId);
-
-      renderMusicResults();
-    } else {
-      // === MÉTODO ALTERNATIVO: Links de búsqueda directa de YouTube ===
-      // Sin API key, generamos resultados de búsqueda embebibles
-      container.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:1.5rem;">
-          <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
-            Para buscar canciones, necesitás configurar una API key gratuita de YouTube.
-          </p>
-          <p style="color:var(--text-muted);font-size:0.8rem;line-height:1.6;">
-            Es gratis: <br>
-            1. Entrá a <a href="https://console.cloud.google.com" target="_blank" style="color:var(--primary-light)">Google Cloud Console</a><br>
-            2. Creá un proyecto → habilitá "YouTube Data API v3"<br>
-            3. Generá una API key<br>
-            4. Pegala en app.js donde dice <code>TU_YOUTUBE_API_KEY_AQUI</code>
-          </p>
-          <p style="color:var(--text-muted);font-size:0.8rem;margin-top:1rem;">
-            O buscá directamente en YouTube:
-          </p>
-          <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' music')}" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;margin-top:0.5rem;">
-            Buscar "${query}" en YouTube
-          </a>
-        </div>
-      `;
-    }
+    renderMusicCards(container, musicPlaylist);
   } catch (err) {
-    console.error('Error búsqueda música:', err);
-    container.innerHTML = '<div class="loading">Error al buscar. Intentá de nuevo.</div>';
+    console.error('Error trending music:', err);
+    // Fallback: buscar canciones populares en iTunes
+    try {
+      const data = await jsonpRequest('https://itunes.apple.com/search?term=top+hits+2026&media=music&limit=25');
+      musicPlaylist = (data.results || []).map(song => ({
+        title: song.trackName,
+        artist: song.artistName,
+        artwork: (song.artworkUrl100 || '').replace('100x100', '300x300'),
+        previewUrl: song.previewUrl || '',
+        itunesUrl: song.trackViewUrl || '',
+        genre: song.primaryGenreName || '',
+      }));
+      renderMusicCards(container, musicPlaylist);
+    } catch (err2) {
+      container.innerHTML = '<div class="loading">Error al cargar música. Reintentá más tarde.</div>';
+    }
   }
 }
 
-function renderMusicResults() {
-  const container = document.getElementById('music-results');
-  container.innerHTML = currentPlaylist.map((track, i) => `
-    <div class="music-card" onclick="playTrack(${i})">
-      <img class="music-thumb" src="${track.thumb}" alt="${track.title}" loading="lazy">
+async function enrichWithPreviews(tracks) {
+  // Buscar preview URLs para las canciones trending (lotes de 5)
+  for (let i = 0; i < tracks.length; i += 5) {
+    const batch = tracks.slice(i, i + 5);
+    await Promise.allSettled(batch.map(async (track) => {
+      if (track.previewUrl) return;
+      try {
+        const query = encodeURIComponent(track.title + ' ' + track.artist);
+        const data = await jsonpRequest(`https://itunes.apple.com/search?term=${query}&media=music&limit=1`);
+        if (data.results?.[0]?.previewUrl) {
+          track.previewUrl = data.results[0].previewUrl;
+        }
+      } catch (e) { /* skip */ }
+    }));
+  }
+}
+
+function renderMusicCards(container, tracks) {
+  if (tracks.length === 0) {
+    container.innerHTML = '<div class="loading">No se encontraron canciones.</div>';
+    return;
+  }
+  container.innerHTML = tracks.map((track, i) => `
+    <div class="music-card" onclick="playMusic(${i})">
+      <img class="music-thumb" src="${track.artwork}" alt="${track.title}" loading="lazy"
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22170%22><rect fill=%22%231e1e2e%22 width=%22300%22 height=%22170%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22>🎵</text></svg>'">
       <div class="music-info">
         <div class="music-title">${track.title}</div>
-        <div class="music-channel">${track.channel}</div>
+        <div class="music-channel">${track.artist}</div>
       </div>
     </div>
   `).join('');
+}
+
+function playMusic(index) {
+  if (index < 0 || index >= musicPlaylist.length) return;
+  currentMusicIndex = index;
+  const track = musicPlaylist[index];
+
+  const player = document.getElementById('music-player');
+  player.classList.remove('hidden');
+
+  document.getElementById('now-playing-title').textContent = track.title;
+  document.getElementById('now-playing-channel').textContent = track.artist;
+  document.getElementById('player-artwork').src = track.artwork;
+
+  const audio = document.getElementById('audio-preview');
+  if (track.previewUrl) {
+    audio.src = track.previewUrl;
+    audio.play().catch(e => console.log('Auto-play bloqueado:', e));
+  } else {
+    audio.removeAttribute('src');
+  }
+
+  // Link a YouTube para escuchar la canción completa
+  const ytQuery = encodeURIComponent(track.title + ' ' + track.artist + ' official audio');
+  document.getElementById('youtube-full-link').href = `https://www.youtube.com/results?search_query=${ytQuery}`;
+
+  // Mini player
+  document.getElementById('mini-title').textContent = `${track.title} — ${track.artist}`;
+
+  // Scroll al player
+  player.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function setupMusicSearch() {
@@ -359,140 +348,263 @@ function setupMusicSearch() {
     if (e.key === 'Enter') searchMusic(input.value);
   });
 
-  // Controles del reproductor
-  document.getElementById('play-pause').addEventListener('click', togglePlayPause);
-  document.getElementById('next-track').addEventListener('click', playNextTrack);
-  document.getElementById('prev-track').addEventListener('click', playPrevTrack);
+  document.getElementById('next-track').addEventListener('click', () => {
+    if (currentMusicIndex < musicPlaylist.length - 1) playMusic(currentMusicIndex + 1);
+  });
+  document.getElementById('prev-track').addEventListener('click', () => {
+    if (currentMusicIndex > 0) playMusic(currentMusicIndex - 1);
+  });
 
-  // Minimizar / expandir player
   document.getElementById('minimize-player').addEventListener('click', () => {
     document.getElementById('music-player').classList.add('hidden');
     document.getElementById('mini-player').classList.remove('hidden');
   });
-
   document.getElementById('expand-player').addEventListener('click', () => {
     document.getElementById('music-player').classList.remove('hidden');
     document.getElementById('mini-player').classList.add('hidden');
   });
-
-  document.getElementById('mini-play-pause').addEventListener('click', togglePlayPause);
 }
 
-// ===================== PELÍCULAS — TMDB =====================
+async function searchMusic(query) {
+  if (!query.trim()) return;
 
-let currentMovieCategory = 'popular';
-let moviesCache = {};
+  // Cambiar a tab de resultados
+  document.querySelectorAll('#music-tabs .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#music-tabs .chip[data-tab="results"]').classList.add('active');
+  document.getElementById('music-trending').classList.add('hidden');
+  document.getElementById('music-results').classList.remove('hidden');
 
-async function loadMovies(category) {
-  currentMovieCategory = category;
-  const container = document.getElementById('movies-grid');
+  const container = document.getElementById('music-results');
+  container.innerHTML = '<div class="loading">Buscando canciones...</div>';
 
-  if (moviesCache[category]) {
-    renderMovies(moviesCache[category]);
-    return;
+  try {
+    const data = await jsonpRequest(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=25`);
+    const results = (data.results || []).map(song => ({
+      title: song.trackName,
+      artist: song.artistName,
+      artwork: (song.artworkUrl100 || '').replace('100x100', '300x300'),
+      previewUrl: song.previewUrl || '',
+      itunesUrl: song.trackViewUrl || '',
+      genre: song.primaryGenreName || '',
+    }));
+
+    musicPlaylist = results;
+    renderMusicCards(container, results);
+  } catch (err) {
+    console.error('Error búsqueda música:', err);
+    container.innerHTML = '<div class="loading">Error al buscar. Reintentá.</div>';
   }
+}
 
+function setupMusicTabs() {
+  document.querySelectorAll('#music-tabs .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#music-tabs .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const tab = chip.dataset.tab;
+      document.getElementById('music-trending').classList.toggle('hidden', tab !== 'trending');
+      document.getElementById('music-results').classList.toggle('hidden', tab !== 'results');
+    });
+  });
+}
+
+// ===================== PELÍCULAS — iTunes + Apple RSS (SIN KEY) =====================
+
+let moviesPlaylist = [];
+
+async function loadTrendingMovies() {
+  const container = document.getElementById('movies-trending');
   container.innerHTML = '<div class="loading">Cargando películas...</div>';
 
   try {
-    if (CONFIG.TMDB_API_KEY === 'TU_API_KEY_AQUI') {
-      // Sin API key — mostrar instrucciones
-      container.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:2rem;">
-          <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
-            Para ver películas reales, necesitás una API key gratuita de TMDB.
-          </p>
-          <p style="color:var(--text-muted);font-size:0.8rem;line-height:1.6;">
-            Es gratis y tarda 2 minutos:<br>
-            1. Entrá a <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color:var(--primary-light)">themoviedb.org/settings/api</a><br>
-            2. Registrate (gratis) → solicitá una API key<br>
-            3. Copiá la API key<br>
-            4. Pegala en app.js donde dice <code>TU_API_KEY_AQUI</code>
-          </p>
-        </div>
-      `;
-      return;
-    }
-
-    const url = `${TMDB_BASE}/movie/${category}?api_key=${CONFIG.TMDB_API_KEY}&language=es-ES&page=1`;
+    const url = 'https://rss.applemarketingtools.com/api/v2/us/movies/most-popular/25/movies.json';
     const res = await fetch(url);
-    if (!res.ok) throw new Error('TMDB Error: ' + res.status);
+    if (!res.ok) throw new Error('RSS error');
     const data = await res.json();
-    moviesCache[category] = data.results;
-    renderMovies(data.results);
+
+    moviesPlaylist = (data.feed?.results || []).map(movie => ({
+      title: movie.name,
+      artwork: movie.artworkUrl100?.replace('100x100', '400x600') || '',
+      releaseDate: movie.releaseDate,
+      genres: movie.genres?.map(g => g.name).join(', ') || '',
+      itunesUrl: movie.url || '',
+      artist: movie.artistName || '',
+      previewUrl: '', // lo buscamos abajo
+      description: '',
+    }));
+
+    // Buscar trailers y descripciones via iTunes Search
+    await enrichMovies(moviesPlaylist);
+
+    renderMovies(container, moviesPlaylist);
   } catch (err) {
-    console.error('Error películas:', err);
-    container.innerHTML = '<div class="loading">Error al cargar películas. Verificá tu API key de TMDB.</div>';
+    console.error('Error trending movies:', err);
+    try {
+      // Fallback: buscar películas populares
+      const data = await jsonpRequest('https://itunes.apple.com/search?term=top+movies+2026&media=movie&limit=25');
+      moviesPlaylist = (data.results || []).map(movie => ({
+        title: movie.trackName,
+        artwork: (movie.artworkUrl100 || '').replace('100x100', '400x600'),
+        releaseDate: movie.releaseDate || '',
+        genres: movie.primaryGenreName || '',
+        itunesUrl: movie.trackViewUrl || '',
+        artist: movie.artistName || '',
+        previewUrl: movie.previewUrl || '',
+        description: movie.longDescription || movie.shortDescription || '',
+      }));
+      renderMovies(container, moviesPlaylist);
+    } catch (err2) {
+      container.innerHTML = '<div class="loading">Error al cargar películas. Reintentá.</div>';
+    }
   }
 }
 
-function renderMovies(movies) {
-  const container = document.getElementById('movies-grid');
-  container.innerHTML = movies.map(m => `
-    <div class="movie-card" onclick="openMovieModal(${m.id})">
-      <img class="movie-poster" src="${m.poster_path ? TMDB_IMG + m.poster_path : ''}" alt="${m.title}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22>Sin imagen</text></svg>'">
+async function enrichMovies(movies) {
+  for (let i = 0; i < movies.length; i += 5) {
+    const batch = movies.slice(i, i + 5);
+    await Promise.allSettled(batch.map(async (movie) => {
+      if (movie.previewUrl && movie.description) return;
+      try {
+        const query = encodeURIComponent(movie.title);
+        const data = await jsonpRequest(`https://itunes.apple.com/search?term=${query}&media=movie&limit=1`);
+        if (data.results?.[0]) {
+          const r = data.results[0];
+          if (!movie.previewUrl) movie.previewUrl = r.previewUrl || '';
+          if (!movie.description) movie.description = r.longDescription || r.shortDescription || '';
+          if (!movie.artwork || movie.artwork.includes('undefined')) {
+            movie.artwork = (r.artworkUrl100 || '').replace('100x100', '400x600');
+          }
+        }
+      } catch (e) { /* skip */ }
+    }));
+  }
+}
+
+function renderMovies(container, movies) {
+  if (movies.length === 0) {
+    container.innerHTML = '<div class="loading">No se encontraron películas.</div>';
+    return;
+  }
+  container.innerHTML = movies.map((m, i) => `
+    <div class="movie-card" onclick="openMovieModal(${i})">
+      <img class="movie-poster" src="${m.artwork}" alt="${m.title}" loading="lazy"
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22450%22><rect fill=%22%2315151f%22 width=%22300%22 height=%22450%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22>🎬</text></svg>'">
       <div class="movie-card-info">
         <div class="movie-card-title">${m.title}</div>
         <div class="movie-card-meta">
-          <span class="movie-rating">★ ${m.vote_average?.toFixed(1) || 'N/A'}</span>
-          <span>${m.release_date?.substring(0, 4) || ''}</span>
+          <span>${m.releaseDate?.substring(0, 4) || ''}</span>
+          ${m.genres ? `<span>· ${m.genres}</span>` : ''}
         </div>
       </div>
     </div>
   `).join('');
 }
 
-async function openMovieModal(movieId) {
+function openMovieModal(index) {
+  const movie = (currentMovieSearchMode ? moviesSearchResults : moviesPlaylist)[index];
+  if (!movie) return;
+
   const modal = document.getElementById('movie-modal');
   const body = document.getElementById('modal-body');
   modal.classList.remove('hidden');
-  body.innerHTML = '<div class="loading">Cargando...</div>';
 
-  try {
-    // Detalles de la película
-    const detailsUrl = `${TMDB_BASE}/movie/${movieId}?api_key=${CONFIG.TMDB_API_KEY}&language=es-ES&append_to_response=videos,credits`;
-    const res = await fetch(detailsUrl);
-    if (!res.ok) throw new Error('Error');
-    const movie = await res.json();
+  const ytQuery = encodeURIComponent(movie.title + ' ' + (movie.releaseDate?.substring(0, 4) || '') + ' trailer español');
 
-    // Buscar trailer oficial en YouTube
-    const trailer = movie.videos?.results?.find(v =>
-      v.type === 'Trailer' && v.site === 'YouTube' && v.official
-    ) || movie.videos?.results?.find(v => v.site === 'YouTube');
-
-    const genres = movie.genres?.map(g => g.name).join(', ') || '';
-    const runtime = movie.runtime ? `${Math.floor(movie.runtime / 60)}h ${movie.runtime % 60}min` : '';
-
-    body.innerHTML = `
-      ${movie.backdrop_path ? `<div class="modal-backdrop" style="background-image:url(${TMDB_BACKDROP}${movie.backdrop_path})"></div>` : ''}
-      <div class="modal-body-info">
-        <h2 class="modal-title">${movie.title}</h2>
-        <div class="modal-meta">
-          <span class="movie-rating">★ ${movie.vote_average?.toFixed(1)}</span>
-          <span>${movie.release_date?.substring(0, 4)}</span>
-          ${runtime ? `<span>${runtime}</span>` : ''}
-          ${genres ? `<span>${genres}</span>` : ''}
-        </div>
-        <p class="modal-overview">${movie.overview || 'Sin descripción disponible.'}</p>
-        ${trailer ? `
-          <h3 style="font-size:1rem;margin-bottom:0.5rem;">Tráiler Oficial</h3>
-          <div class="trailer-container">
-            <iframe src="https://www.youtube.com/embed/${trailer.key}" allow="encrypted-media" allowfullscreen></iframe>
-          </div>
-        ` : '<p style="color:var(--text-muted);">No hay tráiler disponible.</p>'}
+  body.innerHTML = `
+    ${movie.artwork ? `<div class="modal-backdrop" style="background-image:url('${movie.artwork.replace('400x600', 'w780')}')">` : ''}
+    </div>
+    <div class="modal-body-info">
+      <h2 class="modal-title">${movie.title}</h2>
+      <div class="modal-meta">
+        ${movie.releaseDate ? `<span>📅 ${movie.releaseDate.substring(0, 4)}</span>` : ''}
+        ${movie.genres ? `<span>🎬 ${movie.genres}</span>` : ''}
+        ${movie.artist ? `<span>⭐ ${movie.artist}</span>` : ''}
       </div>
-    `;
-  } catch (err) {
-    body.innerHTML = '<div class="loading">Error al cargar la película.</div>';
+      <p class="modal-overview">${movie.description || 'Sin descripción disponible.'}</p>
+      
+      ${movie.previewUrl ? `
+        <h3 style="font-size:1rem;margin-bottom:0.5rem;margin-top:1rem;">▶ Tráiler</h3>
+        <div class="trailer-container">
+          <video controls width="100%" style="position:absolute;inset:0;width:100%;height:100%;background:#000;">
+            <source src="${movie.previewUrl}" type="video/mp4">
+            Tu navegador no soporta video.
+          </video>
+        </div>
+      ` : '<p style="color:var(--text-muted);margin-top:1rem;">Tráiler no disponible en esta región.</p>'}
+      
+      <div style="margin-top:1rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <a href="https://www.youtube.com/results?search_query=${ytQuery}" target="_blank" class="btn-primary" style="text-decoration:none;">
+          ▶ Ver tráiler en YouTube
+        </a>
+        ${movie.itunesUrl ? `<a href="${movie.itunesUrl}" target="_blank" class="btn-primary" style="text-decoration:none;background:var(--bg-card-hover);border:1px solid var(--border);">Ver en iTunes</a>` : ''}
+      </div>
+    </div>
+  `;
+
+  // Auto-play trailer
+  if (movie.previewUrl) {
+    setTimeout(() => {
+      const v = body.querySelector('video');
+      if (v) v.play().catch(() => {});
+    }, 300);
   }
 }
 
-function setupMovieCategories() {
-  document.querySelectorAll('#movie-categories .chip').forEach(chip => {
+let moviesSearchResults = [];
+let currentMovieSearchMode = false;
+
+function setupMovieSearch() {
+  const input = document.getElementById('movie-search');
+  const btn = document.getElementById('movie-search-btn');
+
+  btn.addEventListener('click', () => searchMovies(input.value));
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') searchMovies(input.value);
+  });
+}
+
+async function searchMovies(query) {
+  if (!query.trim()) return;
+
+  // Cambiar a tab resultados
+  document.querySelectorAll('#movie-tabs .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#movie-tabs .chip[data-tab="results"]').classList.add('active');
+  document.getElementById('movies-trending').classList.add('hidden');
+  document.getElementById('movies-grid').classList.remove('hidden');
+
+  const container = document.getElementById('movies-grid');
+  container.innerHTML = '<div class="loading">Buscando películas...</div>';
+
+  try {
+    const data = await jsonpRequest(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=movie&limit=25`);
+    moviesSearchResults = (data.results || []).map(movie => ({
+      title: movie.trackName,
+      artwork: (movie.artworkUrl100 || '').replace('100x100', '400x600'),
+      releaseDate: movie.releaseDate || '',
+      genres: movie.primaryGenreName || '',
+      itunesUrl: movie.trackViewUrl || '',
+      artist: movie.artistName || '',
+      previewUrl: movie.previewUrl || '',
+      description: movie.longDescription || movie.shortDescription || '',
+    }));
+
+    currentMovieSearchMode = true;
+    renderMovies(container, moviesSearchResults);
+  } catch (err) {
+    console.error('Error búsqueda películas:', err);
+    container.innerHTML = '<div class="loading">Error al buscar. Reintentá.</div>';
+  }
+}
+
+function setupMovieTabs() {
+  document.querySelectorAll('#movie-tabs .chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      document.querySelectorAll('#movie-categories .chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('#movie-tabs .chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
-      loadMovies(chip.dataset.cat);
+      const tab = chip.dataset.tab;
+      document.getElementById('movies-trending').classList.toggle('hidden', tab !== 'trending');
+      document.getElementById('movies-grid').classList.toggle('hidden', tab !== 'results');
+      currentMovieSearchMode = tab === 'results';
     });
   });
 }
@@ -501,6 +613,9 @@ function setupMovieModal() {
   document.getElementById('close-modal').addEventListener('click', () => {
     document.getElementById('movie-modal').classList.add('hidden');
     document.getElementById('modal-body').innerHTML = '';
+    // Pausar video
+    const v = document.querySelector('#modal-body video');
+    if (v) v.pause();
   });
 
   document.getElementById('movie-modal').addEventListener('click', (e) => {

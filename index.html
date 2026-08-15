@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0a0a0f">
 <title>LUXTIN</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/luxtin-logo-128.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,15 +16,8 @@
 <div id="splash" class="splash-screen">
   <div class="splash-bg"></div>
   <div class="splash-content">
-    <div class="luxtin-logo">
-      <div class="luxtin-letters">
-        <span class="letter" style="--delay:0s">L</span>
-        <span class="letter" style="--delay:0.1s">U</span>
-        <span class="letter" style="--delay:0.2s">X</span>
-        <span class="letter" style="--delay:0.3s">T</span>
-        <span class="letter" style="--delay:0.4s">I</span>
-        <span class="letter" style="--delay:0.5s">N</span>
-      </div>
+    <div class="luxtin-logo-wrap">
+      <img src="assets/luxtin-logo-512.png" alt="LUXTIN TV" class="luxtin-logo-img">
       <div class="luxtin-shine"></div>
     </div>
     <div class="luxtin-subtitle">FÚTBOL · MÚSICA · PELÍCULAS</div>
@@ -34,7 +29,7 @@
 
   <!-- TOP BAR -->
   <header class="topbar">
-    <div class="topbar-logo">LUXTIN</div>
+    <div class="topbar-logo"><img src="assets/luxtin-logo-128.png" alt="LUXTIN" class="topbar-logo-img"></div>
     <nav class="nav-tabs">
       <button class="nav-btn active" data-section="deportes">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>
@@ -97,6 +92,8 @@
 
     <div class="filter-chips" id="music-genre-filters">
       <button class="chip active" data-genre="trending">🔥 Tendencias</button>
+      <button class="chip" data-genre="hits2026">✨ Éxitos 2026</button>
+      <button class="chip" data-genre="clasicos2015">📻 Clásicos 2015</button>
       <button class="chip" data-genre="pop">Pop</button>
       <button class="chip" data-genre="reggaeton">Reggaeton</button>
       <button class="chip" data-genre="rock">Rock</button>

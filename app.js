@@ -371,7 +371,7 @@ function renderMoviesPage(container) {
     const icon = getGenreIcon(m.g);
     const rating = m.r > 0 ? `<span style="color:#fdcb6e;font-weight:700;">★ ${m.r}</span>` : '';
     const genres = m.g.slice(0, 2).join(', ');
-    const posterUrl = m.pi ? `https://image.tmdb.org/t/p/w342${m.pi}` : '';
+    const posterUrl = m.pi ? `https://image.tmdb.org/t/p/w342/${m.pi}` : '';
     const posterHtml = posterUrl
       ? `<img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
          <div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
@@ -433,13 +433,26 @@ function openMovieModal(i) {
     starsHtml += s < fullStars ? '<span style="color:#fdcb6e;">★</span>' : '<span style="color:#444;">★</span>';
   }
 
-  body.innerHTML = `
-    <div class="modal-backdrop" style="background:linear-gradient(135deg, ${c1}, ${c2});display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;">
-      <div>
+  const posterLarge = m.pi ? `https://image.tmdb.org/t/p/w780/${m.pi}` : '';
+  const backdropStyle = posterLarge
+    ? `background-image:url('${posterLarge}');background-size:cover;background-position:center top;`
+    : `background:linear-gradient(135deg, ${c1}, ${c2});`;
+  const backdropContent = posterLarge
+    ? `<div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.85));display:flex;align-items:flex-end;padding:1.5rem;">
+        <div>
+          <div style="font-size:1.6rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.8);">${m.t}</div>
+          <div style="font-size:0.85rem;color:rgba(255,255,255,0.85);margin-top:0.3rem;">${m.o !== m.t ? m.o + ' (' : ''}${m.y || ''}${m.o !== m.t ? ')' : ''}</div>
+        </div>
+      </div>`
+    : `<div>
         <div style="font-size:2.5rem;margin-bottom:0.5rem;">${getGenreIcon(m.g)}</div>
         <div style="font-size:1.6rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);">${m.t}</div>
         <div style="font-size:0.85rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.o !== m.t ? m.o + ' (' : ''}${m.y || ''}${m.o !== m.t ? ')' : ''}</div>
-      </div>
+      </div>`;
+
+  body.innerHTML = `
+    <div class="modal-backdrop" style="position:relative;${backdropStyle}display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;overflow:hidden;">
+      ${backdropContent}
     </div>
     <div class="modal-body-info">
       <h2 class="modal-title">${m.t}</h2>

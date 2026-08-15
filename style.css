@@ -65,32 +65,22 @@ a { color: inherit; }
   text-align: center;
 }
 
-.luxtin-logo {
+.luxtin-logo-wrap {
   position: relative;
   overflow: hidden;
-  padding: 0.5rem 2rem;
-}
-
-.luxtin-letters {
-  display: flex;
-  gap: 0.1em;
-  font-size: clamp(2.5rem, 10vw, 5rem);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  background: linear-gradient(135deg, #6c5ce7, #00cec9, #6c5ce7);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradientShift 3s ease infinite;
-}
-
-.letter {
   display: inline-block;
+  padding: 0.5rem 1rem;
+}
+
+.luxtin-logo-img {
+  width: clamp(180px, 45vw, 320px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
   opacity: 0;
-  transform: translateY(40px) scale(0.5) rotateX(90deg);
-  animation: letterIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  animation-delay: var(--delay);
+  transform: scale(0.7) translateY(20px);
+  filter: drop-shadow(0 10px 30px rgba(212, 175, 55, 0.4));
+  animation: logoIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .luxtin-shine {
@@ -99,8 +89,8 @@ a { color: inherit; }
   left: -100%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
-  animation: shine 2s ease 0.8s;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+  animation: shine 2s ease 0.9s;
 }
 
 .luxtin-subtitle {
@@ -112,8 +102,9 @@ a { color: inherit; }
   animation: fadeInUp 0.8s ease 1.2s forwards;
 }
 
-@keyframes letterIn {
-  to { opacity: 1; transform: translateY(0) scale(1) rotateX(0); }
+@keyframes logoIn {
+  60% { opacity: 1; transform: scale(1.05) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes bgPulse {
@@ -161,15 +152,16 @@ a { color: inherit; }
 }
 
 .topbar-logo {
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   text-align: center;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.4rem;
+  display: flex;
+  justify-content: center;
+}
+
+.topbar-logo-img {
+  height: 40px;
+  width: auto;
+  display: block;
 }
 
 .nav-tabs {
@@ -738,7 +730,10 @@ audio {
 
   .topbar-logo {
     margin-bottom: 0;
-    font-size: 1.5rem;
+  }
+
+  .topbar-logo-img {
+    height: 46px;
   }
 
   .nav-tabs { gap: 0.8rem; }

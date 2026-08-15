@@ -574,77 +574,48 @@ function playDisneyEpisode(videoId, title) {
   iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ===================== CANAL 13 — STREAM EN VIVO =====================
-let canal13Hls = null;
+// ===================== CANAL 13 — NOTICIAS EN VIVO (YouTube) =====================
+// Clips de eltrece para cuando no hay stream en vivo
+const NOTICIAS_CLIPS = [
+  { title: 'Telenoche — Programa completo', videoId: 'HvBz7qCJ-14', thumb: 'https://i.ytimg.com/vi/HvBz7qCJ-14/hqdefault.jpg' },
+  { title: 'Mediodía Noticias', videoId: 'W-r1md78L2U', thumb: 'https://i.ytimg.com/vi/W-r1md78L2U/hqdefault.jpg' },
+  { title: 'Arriba Argentinos', videoId: '_W9hxilbXh8', thumb: 'https://i.ytimg.com/vi/_W9hxilbXh8/hqdefault.jpg' },
+  { title: 'El Trece — ID y gráfica', videoId: 'VccOfbirnQg', thumb: 'https://i.ytimg.com/vi/VccOfbirnQg/hqdefault.jpg' },
+  { title: 'Canal 13 en vivo', videoId: '8WvBEksNx60', thumb: 'https://i.ytimg.com/vi/8WvBEksNx60/hqdefault.jpg' },
+  { title: 'TUCUMÁN REGISTRADO', videoId: '2ZNUsoLTehU', thumb: 'https://i.ytimg.com/vi/2ZNUsoLTehU/hqdefault.jpg' }
+];
 
-function initCanal13Stream() {
-  const video = document.getElementById('canal13-video');
-  if (!video) return;
-  
-  const streamUrl = 'https://livetrx01.vodgc.net/eltrecetv/index.m3u8';
-  
-  // Destruir instancia anterior si existe
-  if (canal13Hls) {
-    canal13Hls.destroy();
-    canal13Hls = null;
-  }
-  
-  if (window.Hls && Hls.isSupported()) {
-    canal13Hls = new Hls({
-      enableWorker: true,
-      lowLatencyMode: true,
-      backBuffer: 30,
-      maxBufferLength: 30,
-      maxMaxBufferLength: 60,
-    });
-    
-    canal13Hls.loadSource(streamUrl);
-    canal13Hls.attachMedia(video);
-    
-    canal13Hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.play().catch(() => {});
-      document.getElementById('canal13-retry').style.display = 'none';
-    });
-    
-    canal13Hls.on(Hls.Events.ERROR, (event, data) => {
-      if (data.fatal) {
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            canal13Hls.startLoad();
-            break;
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            canal13Hls.recoverMediaError();
-            break;
-          default:
-            canal13Hls.destroy();
-            canal13Hls = null;
-            document.getElementById('canal13-retry').style.display = 'inline-flex';
-            break;
-        }
-      }
-    });
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari nativo HLS
-    video.src = streamUrl;
-    video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
-  } else {
-    document.getElementById('canal13-retry').style.display = 'inline-flex';
-  }
+function renderNoticiasClips() {
+  const grid = document.getElementById('noticias-clips-grid');
+  if (!grid) return;
+  grid.innerHTML = NOTICIAS_CLIPS.map(clip => `
+    <div class="disney-episode-card" onclick="playNoticiasClip('${clip.videoId}')">
+      <div class="disney-episode-thumb">
+        <img src="${clip.thumb}" alt="${clip.title}" loading="lazy" onerror="this.style.display='none';">
+        <div class="disney-play-overlay">▶</div>
+      </div>
+      <div class="disney-episode-title">${clip.title}</div>
+    </div>
+  `).join('');
 }
 
-document.getElementById('canal13-retry')?.addEventListener('click', initCanal13Stream);
+function playNoticiasClip(videoId) {
+  const iframe = document.getElementById('noticias-live-iframe');
+  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
-// Inicializar Disney y Canal 13 al cargar
+// Inicializar contenido al cargar
 renderDisneyEpisodes();
+renderNoticiasClips();
 
-// Inicializar Canal 13 cuando se hace clic en la pestaña de Noticias
+// Re-inicializar al cambiar de pestaña
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    if (btn.dataset.section === 'noticias') {
-      setTimeout(initCanal13Stream, 100);
-    } else if (btn.dataset.section === 'disney') {
-      // Asegurar que los episodios estén renderizados
+    if (btn.dataset.section === 'disney') {
       renderDisneyEpisodes();
+    } else if (btn.dataset.section === 'noticias') {
+      renderNoticiasClips();
     }
   });
 });

@@ -537,3 +537,138 @@ function searchMovies(query) {
     renderMoviesPage(container);
   }
 }
+
+// ===================== DISNEY JUNIOR — EPISODIOS =====================
+const DISNEY_EPISODES = [
+  { title: 'Mickey Mouse Clubhouse', videoId: 'bQkXyq7K8gA', thumb: 'https://image.tmdb.org/t/p/w342/4M7jg5n7n9k6rH4Ut3gYAwRJDQM.jpg' },
+  { title: 'Doc McStuffins', videoId: 'rY0H7jF9KvE', thumb: 'https://i.ytimg.com/vi/rY0H7jF9KvE/hqdefault.jpg' },
+  { title: 'Sofia the First', videoId: 'a3KL2f6o5kQ', thumb: 'https://i.ytimg.com/vi/a3KL2f6o5kQ/hqdefault.jpg' },
+  { title: 'PJ Masks', videoId: 'x5j8M3vq2yU', thumb: 'https://i.ytimg.com/vi/x5j8M3vq2yU/hqdefault.jpg' },
+  { title: 'Bluey', videoId: '0H5mQ3m6oXw', thumb: 'https://i.ytimg.com/vi/0H5mQ3m6oXw/hqdefault.jpg' },
+  { title: 'Spidey and His Amazing Friends', videoId: 'k3nKqLp8jWc', thumb: 'https://i.ytimg.com/vi/k3nKqLp8jWc/hqdefault.jpg' },
+  { title: 'T.O.T.S. (Tiny Ones Transport Service)', videoId: 'mW8R7p3vN6s', thumb: 'https://i.ytimg.com/vi/mW8R7p3vN6s/hqdefault.jpg' },
+  { title: 'Muppet Babies', videoId: 'fR2kP9n3qLw', thumb: 'https://i.ytimg.com/vi/fR2kP9n3qLw/hqdefault.jpg' },
+  { title: 'Vampirina', videoId: '7Kq8m2n9pXs', thumb: 'https://i.ytimg.com/vi/7Kq8m2n9pXs/hqdefault.jpg' },
+  { title: 'Miles from Tomorrowland', videoId: 'jP5k3r8vN2d', thumb: 'https://i.ytimg.com/vi/jP5k3r8vN2d/hqdefault.jpg' },
+  { title: 'Handy Manny', videoId: 'p9Kq2m7nR3x', thumb: 'https://i.ytimg.com/vi/p9Kq2m7nR3x/hqdefault.jpg' },
+  { title: 'Little Einsteins', videoId: 'wN7k3p8m2qL', thumb: 'https://i.ytimg.com/vi/wN7k3p8m2qL/hqdefault.jpg' }
+];
+
+function renderDisneyEpisodes() {
+  const grid = document.getElementById('disney-episodes-grid');
+  if (!grid) return;
+  grid.innerHTML = DISNEY_EPISODES.map(ep => `
+    <div class="disney-episode-card" onclick="playDisneyEpisode('${ep.videoId}', '${ep.title.replace(/'/g, "\\'")}')">
+      <div class="disney-episode-thumb">
+        <img src="${ep.thumb}" alt="${ep.title}" loading="lazy" onerror="this.style.display='none';">
+        <div class="disney-play-overlay">▶</div>
+      </div>
+      <div class="disney-episode-title">${ep.title}</div>
+    </div>
+  `).join('');
+}
+
+function playDisneyEpisode(videoId, title) {
+  const iframe = document.getElementById('disney-live-iframe');
+  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ===================== CANAL 13 — STREAM EN VIVO =====================
+let canal13Hls = null;
+
+function initCanal13Stream() {
+  const video = document.getElementById('canal13-video');
+  if (!video) return;
+  
+  const streamUrl = 'https://livetrx01.vodgc.net/eltrecetv/index.m3u8';
+  
+  // Destruir instancia anterior si existe
+  if (canal13Hls) {
+    canal13Hls.destroy();
+    canal13Hls = null;
+  }
+  
+  if (window.Hls && Hls.isSupported()) {
+    canal13Hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBuffer: 30,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+    });
+    
+    canal13Hls.loadSource(streamUrl);
+    canal13Hls.attachMedia(video);
+    
+    canal13Hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(() => {});
+      document.getElementById('canal13-retry').style.display = 'none';
+    });
+    
+    canal13Hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            canal13Hls.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            canal13Hls.recoverMediaError();
+            break;
+          default:
+            canal13Hls.destroy();
+            canal13Hls = null;
+            document.getElementById('canal13-retry').style.display = 'inline-flex';
+            break;
+        }
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari nativo HLS
+    video.src = streamUrl;
+    video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
+  } else {
+    document.getElementById('canal13-retry').style.display = 'inline-flex';
+  }
+}
+
+document.getElementById('canal13-retry')?.addEventListener('click', initCanal13Stream);
+
+// Inicializar Disney y Canal 13 al cargar
+renderDisneyEpisodes();
+
+// Inicializar Canal 13 cuando se hace clic en la pestaña de Noticias
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.section === 'noticias') {
+      setTimeout(initCanal13Stream, 100);
+    } else if (btn.dataset.section === 'disney') {
+      // Asegurar que los episodios estén renderizados
+      renderDisneyEpisodes();
+    }
+  });
+});
+
+// Scroll infinito para películas (cargar más al hacer scroll)
+window.addEventListener('scroll', () => {
+  if (typeof moviesToShow !== 'undefined' && moviesToShow.length > 0) {
+    const container = document.getElementById('movies-grid');
+    if (container && document.getElementById('peliculas').classList.contains('active')) {
+      const scrollPos = window.innerHeight + window.scrollY;
+      const docHeight = document.body.offsetHeight;
+      if (scrollPos >= docHeight - 300) {
+        const section = document.getElementById('peliculas');
+        if (section.classList.contains('active') && typeof loadMoreMovies === 'function') {
+          loadMoreMovies();
+        }
+      }
+    }
+  }
+});
+
+function loadMoreMovies() {
+  const container = document.getElementById('movies-grid');
+  if (!container) return;
+  moviesPage++;
+  renderMoviesPage(container);
+}

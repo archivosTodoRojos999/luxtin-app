@@ -782,3 +782,79 @@ audio {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+/* ===================== DISNEY JUNIOR ===================== */
+.disney-episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.disney-episode-card {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--card-bg);
+  transition: transform 0.2s;
+}
+
+.disney-episode-card:hover {
+  transform: scale(1.03);
+}
+
+.disney-episode-thumb {
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  background: linear-gradient(145deg, #6c5ce7, #00cec9);
+}
+
+.disney-episode-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.disney-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: white;
+  background: rgba(0,0,0,0.35);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.disney-episode-card:hover .disney-play-overlay {
+  opacity: 1;
+}
+
+.disney-episode-title {
+  padding: 0.7rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ===================== NOTICIAS EN VIVO ===================== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Nav tabs con 5 botones — ajustar */
+@media (max-width: 600px) {
+  .nav-tabs {
+    gap: 0.1rem;
+  }
+  .nav-btn span {
+    font-size: 0.6rem;
+  }
+  .nav-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+}

@@ -77,9 +77,10 @@ a { color: inherit; }
   height: auto;
   display: block;
   margin: 0 auto;
+  border-radius: 22%;
   opacity: 0;
   transform: scale(0.7) translateY(20px);
-  filter: drop-shadow(0 10px 30px rgba(212, 175, 55, 0.4));
+  filter: drop-shadow(0 10px 30px rgba(212, 175, 55, 0.5));
   animation: logoIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
@@ -162,6 +163,7 @@ a { color: inherit; }
   height: 40px;
   width: auto;
   display: block;
+  border-radius: 22%;
 }
 
 .nav-tabs {
@@ -569,6 +571,14 @@ audio {
   transform: translateY(-4px);
   border-color: var(--primary);
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.movie-poster-img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+  background: var(--border);
 }
 
 .movie-poster {

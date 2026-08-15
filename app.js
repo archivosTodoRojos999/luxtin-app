@@ -540,20 +540,37 @@ function searchMovies(query) {
   }
 }
 
-// ===================== DISNEY JUNIOR — EPISODIOS REALES DE YOUTUBE =====================
+// ===================== DISNEY JUNIOR — EPISODIOS EN ESPAÑOL (Disney Jr. Latinoamérica) =====================
 const DISNEY_EPISODES = [
-  { title: 'Mickey Mouse Clubhouse — Mickey Goes Fishing (Episodio completo)', videoId: 'm3LV5Z2nCRg', thumb: 'https://i.ytimg.com/vi/m3LV5Z2nCRg/hqdefault.jpg' },
-  { title: 'Mickey Mouse Clubhouse+ — Primer episodio completo', videoId: 'iGY-0UAntjg', thumb: 'https://i.ytimg.com/vi/iGY-0UAntjg/hqdefault.jpg' },
-  { title: 'Disney Jr. Ariel — Episodio completo: Atlantica Day', videoId: 'jubynQvgCoU', thumb: 'https://i.ytimg.com/vi/jubynQvgCoU/hqdefault.jpg' },
-  { title: 'Mickey y Bluey juegan a las Estatuas Musicales', videoId: '8irjpFMQphI', thumb: 'https://i.ytimg.com/vi/8irjpFMQphI/hqdefault.jpg' },
-  { title: 'Snack Time! Compilación +1 hora con Mickey, Spidey y Bluey', videoId: 'zODtkNUOk0M', thumb: 'https://i.ytimg.com/vi/zODtkNUOk0M/hqdefault.jpg' },
-  { title: 'Hora de Dormir — Compilación con Mickey y Bluey', videoId: 'N0j6_3S_STc', thumb: 'https://i.ytimg.com/vi/N0j6_3S_STc/hqdefault.jpg' },
-  { title: 'Usemos la Imaginación — Compilación Disney Jr.', videoId: 'QWc97TxvTiQ', thumb: 'https://i.ytimg.com/vi/QWc97TxvTiQ/hqdefault.jpg' },
-  { title: 'Mickey Mouse Clubhouse — Toda la Temporada 1', videoId: 'o_YV7lSEbO0', thumb: 'https://i.ytimg.com/vi/o_YV7lSEbO0/hqdefault.jpg' },
-  { title: 'Jugando Afuera! Compilación al aire libre', videoId: '6kivApCL1bg', thumb: 'https://i.ytimg.com/vi/6kivApCL1bg/hqdefault.jpg' },
-  { title: 'Spidey and His Amazing Friends — Mr. Fantastic ayuda', videoId: 'Ufy7LjF0FZ0', thumb: 'https://i.ytimg.com/vi/Ufy7LjF0FZ0/hqdefault.jpg' },
-  { title: 'BeddyByes — Episodio completo: Showtime', videoId: 'dlZA00E70Gs', thumb: 'https://i.ytimg.com/vi/dlZA00E70Gs/hqdefault.jpg' },
-  { title: 'Sofia the First — Royal Magic - Lets Play All Day', videoId: '0ud7777PGZw', thumb: 'https://i.ytimg.com/vi/0ud7777PGZw/hqdefault.jpg' }
+  // La Casa de Mickey Mouse
+  { title: 'La Casa de Mickey Mouse — El deportetón de Mickey', videoId: 'rcqU4Ls13qA', thumb: 'https://i.ytimg.com/vi/rcqU4Ls13qA/hqdefault.jpg' },
+  { title: 'La Casa de Mickey Mouse — La Gran Sorpresa de Mickey', videoId: 'UBxqzZPA8SA', thumb: 'https://i.ytimg.com/vi/UBxqzZPA8SA/hqdefault.jpg' },
+  { title: 'La Casa de Mickey Mouse — El Feliz Mousekedía', videoId: '6xSNdDsvwC4', thumb: 'https://i.ytimg.com/vi/6xSNdDsvwC4/hqdefault.jpg' },
+  { title: 'La Casa de Mickey Mouse — La escamosa historia', videoId: 'VtRgDyT_TCw', thumb: 'https://i.ytimg.com/vi/VtRgDyT_TCw/hqdefault.jpg' },
+  { title: 'La Casa de Mickey Mouse — Celebra la Primavera', videoId: 'i-DVaKrbKXA', thumb: 'https://i.ytimg.com/vi/i-DVaKrbKXA/hqdefault.jpg' },
+  { title: 'La Casa de Mickey Mouse — Minniecienta', videoId: 'hKoibVnZ-kA', thumb: 'https://i.ytimg.com/vi/hKoibVnZ-kA/hqdefault.jpg' },
+  { title: 'La Casa de Mickey Mouse — La Gigantesca Aventura de Goofy', videoId: 'YCimIxzUHsk', thumb: 'https://i.ytimg.com/vi/YCimIxzUHsk/hqdefault.jpg' },
+  // Mickey Mouse Funhouse
+  { title: 'Mickey Mouse Funhouse — El cumpleaños de Goofy en el espacio', videoId: 'cRu_UNhn2gc', thumb: 'https://i.ytimg.com/vi/cRu_UNhn2gc/hqdefault.jpg' },
+  // Spidey y sus Sorprendentes Amigos
+  { title: 'Spidey — Vamos dinotelarañas + Fantasma en el museo', videoId: 'qI1ptWsZdgc', thumb: 'https://i.ytimg.com/vi/qI1ptWsZdgc/hqdefault.jpg' },
+  { title: 'Spidey — Viaje a Isla Spider / Superhéroe mojado', videoId: 'JgvKAfqR2Go', thumb: 'https://i.ytimg.com/vi/JgvKAfqR2Go/hqdefault.jpg' },
+  { title: 'Spidey — El escondite / Ballena de un tiempo', videoId: 'ivgjjkpYyto', thumb: 'https://i.ytimg.com/vi/ivgjjkpYyto/hqdefault.jpg' },
+  { title: 'Spidey — Día de la Madre / La casa no tan Divertida', videoId: 'U5cWs3lbXvU', thumb: 'https://i.ytimg.com/vi/U5cWs3lbXvU/hqdefault.jpg' },
+  { title: 'Spidey — Crezcan telarañas + Rio en el espacio', videoId: 'eNwvM1Zg1oE', thumb: 'https://i.ytimg.com/vi/eNwvM1Zg1oE/hqdefault.jpg' },
+  { title: 'Spidey — Lagarto gigante / Salvajes Amigos de Rhino', videoId: 'Y1lm8WS_naM', thumb: 'https://i.ytimg.com/vi/Y1lm8WS_naM/hqdefault.jpg' },
+  // Princesita Sofia
+  { title: 'Princesita Sofia — La Gran Pijamada', videoId: '_UKkNjAFkfE', thumb: 'https://i.ytimg.com/vi/_UKkNjAFkfE/hqdefault.jpg' },
+  { title: 'Princesita Sofia — Princesas al rescate', videoId: 'TSBH3RVpips', thumb: 'https://i.ytimg.com/vi/TSBH3RVpips/hqdefault.jpg' },
+  { title: 'Princesita Sofia — Bienvenidos al Colegium Magicum', videoId: 'VSZ_oVxdhpw', thumb: 'https://i.ytimg.com/vi/VSZ_oVxdhpw/hqdefault.jpg' },
+  { title: 'Princesita Sofia — La llave esmeralda', videoId: 'mwr1uBUEYJI', thumb: 'https://i.ytimg.com/vi/mwr1uBUEYJI/hqdefault.jpg' },
+  { title: 'Princesita Sofia — El hechizo de la princesa Ivy', videoId: 'hC0LEbqOXOE', thumb: 'https://i.ytimg.com/vi/hC0LEbqOXOE/hqdefault.jpg' },
+  // Supergatitos
+  { title: 'Supergatitos — La Feliz Navidad', videoId: 'WsVO0QROA-w', thumb: 'https://i.ytimg.com/vi/WsVO0QROA-w/hqdefault.jpg' },
+  // Doctora Juguetes (Doc McStuffins)
+  { title: 'Doctora Juguetes — Compilado de Canciones', videoId: 'AfAoCX7tv1c', thumb: 'https://i.ytimg.com/vi/AfAoCX7tv1c/hqdefault.jpg' },
+  // Bluey
+  { title: 'Bluey — Los juegos sin fin', videoId: 'WbTc7Mry9w4', thumb: 'https://i.ytimg.com/vi/WbTc7Mry9w4/hqdefault.jpg' },
 ];
 
 function renderDisneyEpisodes() {
@@ -578,6 +595,9 @@ function playDisneyEpisode(videoId, title) {
   if (np) np.textContent = `▶ Reproduciendo: ${title}`;
   iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+// Inicializar Disney al cargar
+renderDisneyEpisodes();
 
 // ===================== NOTICIAS 24/7 — YOUTUBE LIVE =====================
 // Canales de noticias argentinos que transmiten 24/7 en YouTube (nunca se cortan)

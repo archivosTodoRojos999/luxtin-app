@@ -150,7 +150,9 @@ function renderMatches() {
     const homeLogo = m.homeLogo ? `<img src="${m.homeLogo}" class="team-logo" alt="">` : `<div class="team-badge">${m.home[0]}</div>`;
     const awayLogo = m.awayLogo ? `<img src="${m.awayLogo}" class="team-logo" alt="">` : `<div class="team-badge">${m.away[0]}</div>`;
     const score = (m.homeScore !== null) ? `<div class="match-score ${isLive ? 'live' : ''}">${m.homeScore} - ${m.awayScore}</div>` : '<div class="match-score" style="color:var(--text-muted);font-size:0.9rem;">VS</div>';
-    return `<div class="match-card ${isLive ? 'live' : ''}"><div class="match-header"><span class="match-league">${m.league}</span>${badge}</div><div class="match-teams"><div class="team">${homeLogo}<div class="team-name">${m.home}</div></div>${score}<div class="team">${awayLogo}<div class="team-name">${m.away}</div></div></div></div>`;
+    const ytQuery = encodeURIComponent(`${m.home} vs ${m.away} en vivo`);
+    const watchBtn = `<a href="https://www.youtube.com/results?search_query=${ytQuery}" target="_blank" style="display:inline-block;margin-top:0.5rem;padding:0.3rem 0.8rem;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:0.75rem;font-weight:700;text-decoration:none;">▶ Ver en YouTube</a>`;
+    return `<div class="match-card ${isLive ? 'live' : ''}"><div class="match-header"><span class="match-league">${m.league}</span>${badge}</div><div class="match-teams"><div class="team">${homeLogo}<div class="team-name">${m.home}</div></div>${score}<div class="team">${awayLogo}<div class="team-name">${m.away}</div></div></div>${watchBtn}</div>`;
   }).join('');
 }
 
@@ -577,87 +579,32 @@ function playDisneyEpisode(videoId, title) {
   iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ===================== CANAL 13 — STREAM EN VIVO (HLS) =====================
-let canal13Hls = null;
-let canal13Initd = false;
+// ===================== NOTICIAS 24/7 — YOUTUBE LIVE =====================
+// Canales de noticias argentinos que transmiten 24/7 en YouTube (nunca se cortan)
+const NEWS_CHANNELS = {
+  'tn':  { name: 'TN (Todo Noticias) — 24 horas', channelId: 'UCj6PcyLvpnIRT_2W_mwa9Aw' },
+  'a24': { name: 'A24 — 24 horas', channelId: 'UCR9120YBAqMfntqgRTKmkjQ' },
+  'ln':  { name: 'LN+ (La Nación+) — 24 horas', channelId: 'UCba3hpU7EFBSk817y9qZkiA' },
+};
 
-function initCanal13Stream() {
-  const video = document.getElementById('canal13-video');
-  if (!video) return;
-
-  const streamUrl = 'https://livetrx01.vodgc.net/eltrecetv/index.m3u8';
-
-  if (canal13Hls) {
-    canal13Hls.destroy();
-    canal13Hls = null;
-  }
-
-  if (window.Hls && Hls.isSupported()) {
-    canal13Hls = new Hls({
-      enableWorker: true,
-      lowLatencyMode: true,
-      backBuffer: 30,
-      maxBufferLength: 30,
-      maxMaxBufferLength: 60,
-    });
-
-    canal13Hls.loadSource(streamUrl);
-    canal13Hls.attachMedia(video);
-
-    canal13Hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.play().catch(() => {});
-      const retry = document.getElementById('canal13-retry');
-      if (retry) retry.style.display = 'none';
-    });
-
-    canal13Hls.on(Hls.Events.ERROR, (event, data) => {
-      if (data.fatal) {
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            canal13Hls.startLoad();
-            break;
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            canal13Hls.recoverMediaError();
-            break;
-          default:
-            canal13Hls.destroy();
-            canal13Hls = null;
-            const retry = document.getElementById('canal13-retry');
-            if (retry) retry.style.display = 'inline-flex';
-            break;
-        }
-      }
-    });
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari nativo HLS
-    video.src = streamUrl;
-    video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
-  } else {
-    const retry = document.getElementById('canal13-retry');
-    if (retry) retry.style.display = 'inline-flex';
-  }
+function switchNewsChannel(channelKey) {
+  const ch = NEWS_CHANNELS[channelKey];
+  if (!ch) return;
+  const iframe = document.getElementById('news-player');
+  if (!iframe) return;
+  iframe.src = `https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=1`;
+  const nameEl = document.getElementById('news-channel-name');
+  if (nameEl) nameEl.textContent = `EN VIVO · ${ch.name}`;
 }
 
-// Inicializar Disney al cargar
-renderDisneyEpisodes();
-
-// Inicializar Canal 13 cuando se entra a la pestaña de Noticias
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (btn.dataset.section === 'noticias') {
-      if (!canal13Initd) {
-        canal13Initd = true;
-        setTimeout(initCanal13Stream, 200);
-      }
-    } else if (btn.dataset.section === 'disney') {
-      renderDisneyEpisodes();
-    }
+// Cambiar de canal de noticias
+document.querySelectorAll('#news-channels .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#news-channels .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    switchNewsChannel(chip.dataset.newsChannel);
   });
 });
-
-// Botón de reintentar Canal 13
-const retryBtn = document.getElementById('canal13-retry');
-if (retryBtn) retryBtn.addEventListener('click', initCanal13Stream);
 
 // Scroll infinito para películas (cargar más al hacer scroll)
 window.addEventListener('scroll', () => {

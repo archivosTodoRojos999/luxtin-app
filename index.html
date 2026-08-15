@@ -9,7 +9,6 @@
 <link rel="icon" type="image/png" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/luxtin-logo-128.png">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 </head>
 <body>
 
@@ -59,7 +58,20 @@
   <section id="deportes" class="section active">
     <div class="section-header">
       <h1>Partidos en Vivo</h1>
-      <p class="section-sub">Fútbol mundial en tiempo real — datos de ESPN</p>
+      <p class="section-sub">Fútbol mundial en tiempo real — datos de ESPN + ver partidos en YouTube</p>
+    </div>
+
+    <!-- Canal de deportes en vivo (TyC Sports YouTube) -->
+    <div style="position:relative;width:100%;padding-top:56.25%;border-radius:var(--radius-md);overflow:hidden;background:#000;margin-bottom:1rem;">
+      <iframe id="sports-live-iframe"
+        src="https://www.youtube.com/embed/live_stream?channel=UC72ZaBKI-Bo5fjmWEYonhJw&autoplay=0"
+        style="position:absolute;inset:0;width:100%;height:100%;border:none;"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+        allowfullscreen
+        frameborder="0"></iframe>
+    </div>
+    <div style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+      📺 TyC Sports en YouTube (cuando esté en vivo)
     </div>
 
     <div class="filter-chips" id="league-filters">
@@ -203,38 +215,36 @@
     </div>
   </section>
 
-  <!-- ===================== SECCIÓN NOTICIAS EN VIVO (HLS stream) ===================== -->
+  <!-- ===================== SECCIÓN NOTICIAS 24/7 (YouTube) ===================== -->
   <section id="noticias" class="section">
     <div class="section-header">
-      <h1>Noticias en Vivo</h1>
-      <p class="section-sub">Canal 13 Argentina — El Trece en directo</p>
+      <h1>Noticias 24 Horas</h1>
+      <p class="section-sub">Noticias de Argentina en vivo — nunca se corta</p>
     </div>
 
-    <!-- Player de video con hls.js -->
+    <!-- Selector de canal de noticias -->
+    <div class="filter-chips" id="news-channels" style="margin-bottom:1rem;">
+      <button class="chip active" data-news-channel="tn">TN (Todo Noticias)</button>
+      <button class="chip" data-news-channel="a24">A24</button>
+      <button class="chip" data-news-channel="ln">LN+</button>
+    </div>
+
+    <!-- Player principal de YouTube — 24/7 en vivo -->
     <div style="position:relative;width:100%;padding-top:56.25%;border-radius:var(--radius-md);overflow:hidden;background:#000;margin-bottom:0.5rem;">
-      <video id="canal13-video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;" controls autoplay muted playsinline></video>
-    </div>
-
-    <div style="text-align:center;margin-bottom:1rem;">
-      <button id="canal13-retry" class="btn-primary" style="display:none;">🔄 Reintentar conexión</button>
+      <iframe id="news-player"
+        src="https://www.youtube.com/embed/live_stream?channel=UCj6PcyLvpnIRT_2W_mwa9Aw&autoplay=1"
+        style="position:absolute;inset:0;width:100%;height:100%;border:none;"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+        allowfullscreen
+        frameborder="0"></iframe>
     </div>
 
     <div style="background:var(--card-bg);border-radius:var(--radius-md);padding:1rem 1.2rem;margin-bottom:1rem;">
       <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
         <span style="width:10px;height:10px;background:#e74c3c;border-radius:50%;animation:pulse 2s infinite;display:inline-block;"></span>
-        <span style="font-weight:700;color:var(--text-primary);">EN VIVO · Canal 13 Argentina (El Trece)</span>
+        <span id="news-channel-name" style="font-weight:700;color:var(--text-primary);">EN VIVO · TN (Todo Noticias) — 24 horas</span>
       </div>
-      <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">El Trece — programación en directo desde Buenos Aires. Arriba Argentinos, Mediodía Noticias, Telenoche y más. Si tarda en cargar, tocá ▶ en el reproductor.</p>
-    </div>
-
-    <div style="background:var(--card-bg);border-radius:var(--radius-md);padding:1rem 1.2rem;">
-      <h3 style="font-size:1rem;margin-bottom:0.6rem;color:var(--text-primary);">📋 Programación del día</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.6rem;font-size:0.85rem;color:var(--text-muted);">
-        <div>☀️ <strong>07:00</strong> — Arriba Argentinos</div>
-        <div>📰 <strong>13:00</strong> — Mediodía Noticias</div>
-        <div>🌙 <strong>20:00</strong> — Telenoche</div>
-        <div>🎭 <strong>Prime</strong> — Ficción y entretenimiento</div>
-      </div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">Noticias de Argentina y el mundo las 24 horas, los 7 días. Transmisión continua por YouTube, sin cortes. Cambiá de canal arriba si querés.</p>
     </div>
   </section>
 

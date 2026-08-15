@@ -371,13 +371,21 @@ function renderMoviesPage(container) {
     const icon = getGenreIcon(m.g);
     const rating = m.r > 0 ? `<span style="color:#fdcb6e;font-weight:700;">★ ${m.r}</span>` : '';
     const genres = m.g.slice(0, 2).join(', ');
+    const posterUrl = m.pi ? `https://image.tmdb.org/t/p/w342${m.pi}` : '';
+    const posterHtml = posterUrl
+      ? `<img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+         <div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
+           <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.9;">${icon}</div>
+           <div style="font-size:0.85rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.25;">${m.t}</div>
+           <div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;">${m.y || ''}</div>
+         </div>`
+      : `<div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
+           <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.9;">${icon}</div>
+           <div style="font-size:0.85rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.25;">${m.t}</div>
+           <div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;">${m.y || ''}</div>
+         </div>`;
     return `<div class="movie-card" onclick="openMovieModal(${i})">
-      <div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
-        <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.9;">${icon}</div>
-        <div style="font-size:0.85rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.25;">${m.t}</div>
-        <div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;">${m.y || ''}</div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:0.3rem;background:rgba(0,0,0,0.4);font-size:0.55rem;color:rgba(255,255,255,0.7);text-align:center;">${genres}</div>
-      </div>
+      ${posterHtml}
       <div class="movie-card-info">
         <div class="movie-card-title">${m.t}</div>
         <div class="movie-card-meta">

@@ -264,55 +264,123 @@ async function searchMusic(query) {
 // Base de datos local en movie-database.js
 // Campos: t=título, o=original, y=año, id=TMDB ID, g=géneros, r=rating, d=desc, c=categoría
 
+let moviesToShow = [];
+let moviesPage = 0;
+const MOVIES_PER_PAGE = 60;
+
+// Colores por género — cada género tiene su propio gradiente
+const GENRE_COLORS = {
+  'Animación':     ['#f39c12', '#e67e22'],
+  'Familiar':      ['#e67e22', '#d35400'],
+  'Acción':        ['#e74c3c', '#c0392b'],
+  'Aventura':      ['#e67e22', '#e74c3c'],
+  'Ciencia Ficción': ['#0984e3', '#00cec9'],
+  'Fantasía':      ['#6c5ce7', '#a29bfe'],
+  'Comedia':       ['#00b894', '#55a630'],
+  'Drama':         ['#5f27cd', '#341f97'],
+  'Terror':        ['#2c2c54', '#474787'],
+  'Suspenso':      ['#2c3e50', '#c0392b'],
+  'Crimen':        ['#2c3e50', '#e74c3c'],
+  'Romance':       ['#e84393', '#e74c3c'],
+  'Misterio':      ['#34495e', '#2c3e50'],
+  'Musical':       ['#fd79a8', '#e84393'],
+  'Guerra':        ['#2c3e50', '#7f8c8d'],
+  'Biografía':     ['#3498db', '#2980b9'],
+  'Historia':      ['#d4a017', '#b8860b'],
+  'Documental':    ['#00cec9', '#0984e3'],
+  'Western':       ['#d4a017', '#8B4513'],
+  'Internacional': ['#6c5ce7', '#0984e3'],
+};
+
+function getGenreGradient(genres) {
+  if (genres && genres.length > 0) {
+    const colors = GENRE_COLORS[genres[0]];
+    if (colors) return colors;
+  }
+  return ['#6c5ce7', '#00cec9']; // fallback
+}
+
+function getGenreIcon(genres) {
+  const g = genres.join(' ').toLowerCase();
+  if (g.includes('animación') || g.includes('familiar')) return '🎬';
+  if (g.includes('acción') || g.includes('aventura')) return '💥';
+  if (g.includes('ciencia ficción') || g.includes('fantasía')) return '🚀';
+  if (g.includes('comedia')) return '😂';
+  if (g.includes('drama')) return '🎭';
+  if (g.includes('terror') || g.includes('suspenso')) return '👻';
+  if (g.includes('romance')) return '❤️';
+  if (g.includes('crimen')) return '🔫';
+  if (g.includes('documental')) return '📹';
+  if (g.includes('musical')) return '🎵';
+  return '🎬';
+}
+
 function loadMoviesByCategory(cat) {
   const container = document.getElementById('movies-grid');
   moviesList = MOVIES_DB.filter(m => m.c === cat);
-  renderMovies(container, moviesList);
+  moviesToShow = moviesList;
+  moviesPage = 0;
+  renderMoviesPage(container);
 }
 
-function renderMovies(container, movies) {
-  if (!movies || movies.length === 0) {
-    container.innerHTML = '<div class="loading">No se encontraron películas.</div>';
-    return;
-  }
-  // Limitar a 200 por página para rendimiento
-  const display = movies.slice(0, 200);
+function renderMoviesPage(container) {
+  const start = 0;
+  const end = (moviesPage + 1) * MOVIES_PER_PAGE;
+  const display = moviesToShow.slice(0, end);
+
   container.innerHTML = display.map((m, i) => {
-    const genres = m.g.join(', ');
+    const [c1, c2] = getGenreGradient(m.g);
+    const icon = getGenreIcon(m.g);
     const rating = m.r > 0 ? `<span style="color:#fdcb6e;font-weight:700;">★ ${m.r}</span>` : '';
+    const genres = m.g.slice(0, 2).join(', ');
     return `<div class="movie-card" onclick="openMovieModal(${i})">
-      <div class="movie-poster-placeholder" style="background:linear-gradient(135deg, var(--primary), var(--accent));display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;aspect-ratio:2/3;">
-        <div>
-          <div style="font-size:0.9rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.3;">${m.t}</div>
-          <div style="font-size:0.65rem;color:rgba(255,255,255,0.7);margin-top:0.2rem;">${m.y || ''}</div>
-        </div>
+      <div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.9;">${icon}</div>
+        <div style="font-size:0.85rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.25;">${m.t}</div>
+        <div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;">${m.y || ''}</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:0.3rem;background:rgba(0,0,0,0.4);font-size:0.55rem;color:rgba(255,255,255,0.7);text-align:center;">${genres}</div>
       </div>
       <div class="movie-card-info">
         <div class="movie-card-title">${m.t}</div>
         <div class="movie-card-meta">
           ${rating}
           <span>${m.y || ''}</span>
-          <span style="font-size:0.65rem;">${genres}</span>
         </div>
       </div>
     </div>`;
   }).join('');
-  if (movies.length > 200) {
-    container.innerHTML += `<div style="grid-column:1/-1;text-align:center;padding:1rem;color:var(--text-muted);font-size:0.8rem;">Mostrando 200 de ${movies.length} películas. Usá el buscador para encontrar más.</div>`;
+
+  if (moviesToShow.length > end) {
+    container.innerHTML += `<div style="grid-column:1/-1;text-align:center;padding:1.2rem;">
+      <button onclick="loadMoreMovies()" class="btn-primary">Cargar más películas (${moviesToShow.length - end} restantes)</button>
+    </div>`;
+  } else if (moviesToShow.length > MOVIES_PER_PAGE) {
+    container.innerHTML += `<div style="grid-column:1/-1;text-align:center;padding:0.8rem;color:var(--text-muted);font-size:0.75rem;">✅ ${moviesToShow.length} películas cargadas</div>`;
   }
 }
 
+function loadMoreMovies() {
+  moviesPage++;
+  renderMoviesPage(document.getElementById('movies-grid'));
+}
+
+function renderMovies(container, movies) {
+  moviesToShow = movies;
+  moviesPage = 0;
+  renderMoviesPage(container);
+}
+
 function openMovieModal(i) {
-  const m = moviesList[i];
+  const m = moviesToShow[i] || moviesList[i];
   if (!m) return;
   const modal = document.getElementById('movie-modal');
   const body = document.getElementById('modal-body');
   modal.classList.remove('hidden');
 
+  const [c1, c2] = getGenreGradient(m.g);
   const genres = m.g.join(', ');
   const embedUrl = `https://multiembed.mov/?video_id=${m.id}&tmdb=1`;
 
-  // Sistema de estrellas
   const fullStars = Math.floor(m.r / 2);
   let starsHtml = '';
   for (let s = 0; s < 5; s++) {
@@ -320,8 +388,9 @@ function openMovieModal(i) {
   }
 
   body.innerHTML = `
-    <div class="modal-backdrop" style="background:linear-gradient(135deg, var(--primary), var(--accent));display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;">
+    <div class="modal-backdrop" style="background:linear-gradient(135deg, ${c1}, ${c2});display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;">
       <div>
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">${getGenreIcon(m.g)}</div>
         <div style="font-size:1.6rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);">${m.t}</div>
         <div style="font-size:0.85rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.o !== m.t ? m.o + ' (' : ''}${m.y || ''}${m.o !== m.t ? ')' : ''}</div>
       </div>
@@ -404,6 +473,8 @@ function searchMovies(query) {
   if (moviesList.length === 0) {
     container.innerHTML = '<div class="loading">No se encontraron películas para "' + query + '".</div>';
   } else {
-    renderMovies(container, moviesList);
+    moviesToShow = moviesList;
+    moviesPage = 0;
+    renderMoviesPage(container);
   }
 }

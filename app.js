@@ -538,20 +538,20 @@ function searchMovies(query) {
   }
 }
 
-// ===================== DISNEY JUNIOR — EPISODIOS =====================
+// ===================== DISNEY JUNIOR — EPISODIOS REALES DE YOUTUBE =====================
 const DISNEY_EPISODES = [
-  { title: 'Mickey Mouse Clubhouse', videoId: 'bQkXyq7K8gA', thumb: 'https://image.tmdb.org/t/p/w342/4M7jg5n7n9k6rH4Ut3gYAwRJDQM.jpg' },
-  { title: 'Doc McStuffins', videoId: 'rY0H7jF9KvE', thumb: 'https://i.ytimg.com/vi/rY0H7jF9KvE/hqdefault.jpg' },
-  { title: 'Sofia the First', videoId: 'a3KL2f6o5kQ', thumb: 'https://i.ytimg.com/vi/a3KL2f6o5kQ/hqdefault.jpg' },
-  { title: 'PJ Masks', videoId: 'x5j8M3vq2yU', thumb: 'https://i.ytimg.com/vi/x5j8M3vq2yU/hqdefault.jpg' },
-  { title: 'Bluey', videoId: '0H5mQ3m6oXw', thumb: 'https://i.ytimg.com/vi/0H5mQ3m6oXw/hqdefault.jpg' },
-  { title: 'Spidey and His Amazing Friends', videoId: 'k3nKqLp8jWc', thumb: 'https://i.ytimg.com/vi/k3nKqLp8jWc/hqdefault.jpg' },
-  { title: 'T.O.T.S. (Tiny Ones Transport Service)', videoId: 'mW8R7p3vN6s', thumb: 'https://i.ytimg.com/vi/mW8R7p3vN6s/hqdefault.jpg' },
-  { title: 'Muppet Babies', videoId: 'fR2kP9n3qLw', thumb: 'https://i.ytimg.com/vi/fR2kP9n3qLw/hqdefault.jpg' },
-  { title: 'Vampirina', videoId: '7Kq8m2n9pXs', thumb: 'https://i.ytimg.com/vi/7Kq8m2n9pXs/hqdefault.jpg' },
-  { title: 'Miles from Tomorrowland', videoId: 'jP5k3r8vN2d', thumb: 'https://i.ytimg.com/vi/jP5k3r8vN2d/hqdefault.jpg' },
-  { title: 'Handy Manny', videoId: 'p9Kq2m7nR3x', thumb: 'https://i.ytimg.com/vi/p9Kq2m7nR3x/hqdefault.jpg' },
-  { title: 'Little Einsteins', videoId: 'wN7k3p8m2qL', thumb: 'https://i.ytimg.com/vi/wN7k3p8m2qL/hqdefault.jpg' }
+  { title: 'Mickey Mouse Clubhouse — Mickey Goes Fishing (Episodio completo)', videoId: 'm3LV5Z2nCRg', thumb: 'https://i.ytimg.com/vi/m3LV5Z2nCRg/hqdefault.jpg' },
+  { title: 'Mickey Mouse Clubhouse+ — Primer episodio completo', videoId: 'iGY-0UAntjg', thumb: 'https://i.ytimg.com/vi/iGY-0UAntjg/hqdefault.jpg' },
+  { title: 'Disney Jr. Ariel — Episodio completo: Atlantica Day', videoId: 'jubynQvgCoU', thumb: 'https://i.ytimg.com/vi/jubynQvgCoU/hqdefault.jpg' },
+  { title: 'Mickey y Bluey juegan a las Estatuas Musicales', videoId: '8irjpFMQphI', thumb: 'https://i.ytimg.com/vi/8irjpFMQphI/hqdefault.jpg' },
+  { title: 'Snack Time! Compilación +1 hora con Mickey, Spidey y Bluey', videoId: 'zODtkNUOk0M', thumb: 'https://i.ytimg.com/vi/zODtkNUOk0M/hqdefault.jpg' },
+  { title: 'Hora de Dormir — Compilación con Mickey y Bluey', videoId: 'N0j6_3S_STc', thumb: 'https://i.ytimg.com/vi/N0j6_3S_STc/hqdefault.jpg' },
+  { title: 'Usemos la Imaginación — Compilación Disney Jr.', videoId: 'QWc97TxvTiQ', thumb: 'https://i.ytimg.com/vi/QWc97TxvTiQ/hqdefault.jpg' },
+  { title: 'Mickey Mouse Clubhouse — Toda la Temporada 1', videoId: 'o_YV7lSEbO0', thumb: 'https://i.ytimg.com/vi/o_YV7lSEbO0/hqdefault.jpg' },
+  { title: 'Jugando Afuera! Compilación al aire libre', videoId: '6kivApCL1bg', thumb: 'https://i.ytimg.com/vi/6kivApCL1bg/hqdefault.jpg' },
+  { title: 'Spidey and His Amazing Friends — Mr. Fantastic ayuda', videoId: 'Ufy7LjF0FZ0', thumb: 'https://i.ytimg.com/vi/Ufy7LjF0FZ0/hqdefault.jpg' },
+  { title: 'BeddyByes — Episodio completo: Showtime', videoId: 'dlZA00E70Gs', thumb: 'https://i.ytimg.com/vi/dlZA00E70Gs/hqdefault.jpg' },
+  { title: 'Sofia the First — Royal Magic - Lets Play All Day', videoId: '0ud7777PGZw', thumb: 'https://i.ytimg.com/vi/0ud7777PGZw/hqdefault.jpg' }
 ];
 
 function renderDisneyEpisodes() {
@@ -569,56 +569,95 @@ function renderDisneyEpisodes() {
 }
 
 function playDisneyEpisode(videoId, title) {
-  const iframe = document.getElementById('disney-live-iframe');
+  const iframe = document.getElementById('disney-player');
+  if (!iframe) return;
   iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  const np = document.getElementById('disney-now-playing');
+  if (np) np.textContent = `▶ Reproduciendo: ${title}`;
   iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ===================== CANAL 13 — NOTICIAS EN VIVO (YouTube) =====================
-// Clips de eltrece para cuando no hay stream en vivo
-const NOTICIAS_CLIPS = [
-  { title: 'Telenoche — Programa completo', videoId: 'HvBz7qCJ-14', thumb: 'https://i.ytimg.com/vi/HvBz7qCJ-14/hqdefault.jpg' },
-  { title: 'Mediodía Noticias', videoId: 'W-r1md78L2U', thumb: 'https://i.ytimg.com/vi/W-r1md78L2U/hqdefault.jpg' },
-  { title: 'Arriba Argentinos', videoId: '_W9hxilbXh8', thumb: 'https://i.ytimg.com/vi/_W9hxilbXh8/hqdefault.jpg' },
-  { title: 'El Trece — ID y gráfica', videoId: 'VccOfbirnQg', thumb: 'https://i.ytimg.com/vi/VccOfbirnQg/hqdefault.jpg' },
-  { title: 'Canal 13 en vivo', videoId: '8WvBEksNx60', thumb: 'https://i.ytimg.com/vi/8WvBEksNx60/hqdefault.jpg' },
-  { title: 'TUCUMÁN REGISTRADO', videoId: '2ZNUsoLTehU', thumb: 'https://i.ytimg.com/vi/2ZNUsoLTehU/hqdefault.jpg' }
-];
+// ===================== CANAL 13 — STREAM EN VIVO (HLS) =====================
+let canal13Hls = null;
+let canal13Initd = false;
 
-function renderNoticiasClips() {
-  const grid = document.getElementById('noticias-clips-grid');
-  if (!grid) return;
-  grid.innerHTML = NOTICIAS_CLIPS.map(clip => `
-    <div class="disney-episode-card" onclick="playNoticiasClip('${clip.videoId}')">
-      <div class="disney-episode-thumb">
-        <img src="${clip.thumb}" alt="${clip.title}" loading="lazy" onerror="this.style.display='none';">
-        <div class="disney-play-overlay">▶</div>
-      </div>
-      <div class="disney-episode-title">${clip.title}</div>
-    </div>
-  `).join('');
+function initCanal13Stream() {
+  const video = document.getElementById('canal13-video');
+  if (!video) return;
+
+  const streamUrl = 'https://livetrx01.vodgc.net/eltrecetv/index.m3u8';
+
+  if (canal13Hls) {
+    canal13Hls.destroy();
+    canal13Hls = null;
+  }
+
+  if (window.Hls && Hls.isSupported()) {
+    canal13Hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBuffer: 30,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+    });
+
+    canal13Hls.loadSource(streamUrl);
+    canal13Hls.attachMedia(video);
+
+    canal13Hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(() => {});
+      const retry = document.getElementById('canal13-retry');
+      if (retry) retry.style.display = 'none';
+    });
+
+    canal13Hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            canal13Hls.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            canal13Hls.recoverMediaError();
+            break;
+          default:
+            canal13Hls.destroy();
+            canal13Hls = null;
+            const retry = document.getElementById('canal13-retry');
+            if (retry) retry.style.display = 'inline-flex';
+            break;
+        }
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari nativo HLS
+    video.src = streamUrl;
+    video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
+  } else {
+    const retry = document.getElementById('canal13-retry');
+    if (retry) retry.style.display = 'inline-flex';
+  }
 }
 
-function playNoticiasClip(videoId) {
-  const iframe = document.getElementById('noticias-live-iframe');
-  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-  iframe.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-// Inicializar contenido al cargar
+// Inicializar Disney al cargar
 renderDisneyEpisodes();
-renderNoticiasClips();
 
-// Re-inicializar al cambiar de pestaña
+// Inicializar Canal 13 cuando se entra a la pestaña de Noticias
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    if (btn.dataset.section === 'disney') {
+    if (btn.dataset.section === 'noticias') {
+      if (!canal13Initd) {
+        canal13Initd = true;
+        setTimeout(initCanal13Stream, 200);
+      }
+    } else if (btn.dataset.section === 'disney') {
       renderDisneyEpisodes();
-    } else if (btn.dataset.section === 'noticias') {
-      renderNoticiasClips();
     }
   });
 });
+
+// Botón de reintentar Canal 13
+const retryBtn = document.getElementById('canal13-retry');
+if (retryBtn) retryBtn.addEventListener('click', initCanal13Stream);
 
 // Scroll infinito para películas (cargar más al hacer scroll)
 window.addEventListener('scroll', () => {

@@ -265,7 +265,8 @@ function renderMusicCards(container, tracks) {
   container.innerHTML = tracks.map((t, i) => `<div class="music-card" onclick="playMusic(${i})"><img class="music-thumb" src="${t.artwork}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22><rect fill=%22%231e1e2e%22 width=%22300%22 height=%22300%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎵</text></svg>'"><div class="music-info"><div class="music-title">${t.title}</div><div class="music-channel">${t.artist}</div></div></div>`).join('');
 }
 
-function playMusic(i) {
+// Buscar canción en YouTube vía backend function y reproducir completa
+async function playMusic(i) {
   if (i < 0 || i >= musicPlaylist.length) return;
   currentMusicIndex = i;
   const t = musicPlaylist[i];
@@ -273,10 +274,35 @@ function playMusic(i) {
   document.getElementById('now-playing-title').textContent = t.title;
   document.getElementById('now-playing-channel').textContent = t.artist;
   document.getElementById('player-artwork').src = t.artwork;
-  const audio = document.getElementById('audio-preview');
-  if (t.previewUrl) { audio.src = t.previewUrl; audio.play().catch(()=>{}); } else { audio.removeAttribute('src'); }
-  document.getElementById('youtube-full-link').href = `https://www.youtube.com/results?search_query=${encodeURIComponent(t.title+' '+t.artist+' official audio')}`;
   document.getElementById('mini-title').textContent = `${t.title} — ${t.artist}`;
+
+  const ytPlayer = document.getElementById('music-youtube-player');
+  if (ytPlayer) {
+    // Mostrar estado de carga
+    ytPlayer.src = '';
+    document.getElementById('now-playing-title').textContent = t.title + ' (buscando...)';
+
+    try {
+      const resp = await fetch('https://arlow-66e69ab4.base44.app/functions/searchYoutube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: t.title + ' ' + t.artist })
+      });
+      const data = await resp.json();
+      if (data.videoId) {
+        ytPlayer.src = `https://www.youtube.com/embed/${data.videoId}?autoplay=1&rel=0`;
+        document.getElementById('now-playing-title').textContent = t.title;
+      } else {
+        // Fallback: abrir búsqueda en YouTube
+        ytPlayer.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(t.title + ' ' + t.artist)}&autoplay=1`;
+        document.getElementById('now-playing-title').textContent = t.title;
+      }
+    } catch (e) {
+      // Si falla el backend, usar búsqueda directa de YouTube
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(t.title + ' ' + t.artist + ' official audio')}`, '_blank');
+      document.getElementById('now-playing-title').textContent = t.title;
+    }
+  }
   document.getElementById('music-player').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 

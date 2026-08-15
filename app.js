@@ -171,10 +171,27 @@ let currentMusicIndex = -1;
 let loadedGenres = {};
 
 const MUSIC_GENRES = {
-  trending: null, pop: 'musica pop', reggaeton: 'reggaeton', rock: 'rock en español',
+  trending: null, hits2026: null, clasicos2015: null,
+  pop: 'musica pop', reggaeton: 'reggaeton', rock: 'rock en español',
   electronica: 'musica electronica', 'hip hop': 'hip hop', cumbia: 'cumbia',
   salsa: 'salsa', bachata: 'bachata', romantica: 'balada romantica', rap: 'rap en español', trap: 'trap latino',
 };
+
+// Términos de búsqueda multi-consulta para años específicos (mezcla varios artistas/estilos actuales)
+const YEAR_SEARCH_TERMS = {
+  hits2026: ['top hits 2026', 'exitos 2026', 'reggaeton 2026', 'pop 2026', 'musica nueva 2026'],
+  clasicos2015: ['top hits 2015', 'exitos 2015', 'pop 2015', 'reggaeton 2015', 'rock 2015'],
+};
+
+function dedupeTracks(tracks) {
+  const seen = new Set();
+  const out = [];
+  tracks.forEach(t => {
+    const key = (t.title + t.artist).toLowerCase();
+    if (!seen.has(key)) { seen.add(key); out.push(t); }
+  });
+  return out;
+}
 
 async function loadMusicByGenre(genre) {
   const container = document.getElementById('music-grid');
@@ -182,6 +199,8 @@ async function loadMusicByGenre(genre) {
   container.innerHTML = '<div class="loading">🎵 Cargando canciones...</div>';
   try {
     let tracks = [];
+
+    // Tendencias globales (Apple Music charts)
     if (genre === 'trending') {
       try {
         const res = await fetch('https://rss.applemarketingtools.com/api/v2/us/music/most-popular/50/songs.json');
@@ -190,19 +209,38 @@ async function loadMusicByGenre(genre) {
         await enrichMusicPreviews(tracks);
       } catch (e) {}
     }
-    if (tracks.length === 0) {
+
+    // Éxitos 2026 / Clásicos 2015 — múltiples búsquedas combinadas para más variedad
+    if ((genre === 'hits2026' || genre === 'clasicos2015') && YEAR_SEARCH_TERMS[genre]) {
+      const queries = YEAR_SEARCH_TERMS[genre];
+      const results = await Promise.allSettled(
+        queries.map(q => jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=25&country=es`))
+      );
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value?.results) {
+          const mapped = r.value.results.filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'', releaseYear: (s.releaseDate||'').slice(0,4) }));
+          tracks.push(...mapped);
+        }
+      });
+      tracks = dedupeTracks(tracks);
+    }
+
+    // Géneros normales
+    if (tracks.length === 0 && genre !== 'trending') {
       const term = MUSIC_GENRES[genre] || genre;
       const data = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=50&country=es`);
       tracks = (data.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
     }
-    if (tracks.length < 20 && genre !== 'trending') {
+
+    // Relleno extra si hace falta más variedad (géneros normales, no trending/años)
+    if (tracks.length < 20 && genre !== 'trending' && genre !== 'hits2026' && genre !== 'clasicos2015') {
       try {
         const data2 = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(MUSIC_GENRES[genre]+' 2026')}&media=music&limit=25&country=es`);
         const extra = (data2.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
-        const ex = new Set(tracks.map(t => t.title+t.artist));
-        extra.forEach(t => { if (!ex.has(t.title+t.artist)) tracks.push(t); });
+        tracks = dedupeTracks(tracks.concat(extra));
       } catch (e) {}
     }
+
     loadedGenres[genre] = tracks;
     musicPlaylist = tracks;
     renderMusicCards(container, tracks);

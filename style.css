@@ -858,3 +858,137 @@ audio {
     height: 18px;
   }
 }
+
+/* ===================== DEVICE MODES ===================== */
+
+/* MODO CELULAR (por defecto) */
+[data-device="mobile"] {
+  --device-scale: 1;
+  --device-grid-cols: 2;
+  --device-font-scale: 1;
+  --device-nav-size: 0.8rem;
+  --device-card-width: 150px;
+}
+
+/* MODO TELEVISOR */
+[data-device="tv"] {
+  --device-scale: 1.6;
+  --device-grid-cols: 5;
+  --device-font-scale: 1.4;
+  --device-nav-size: 1.2rem;
+  --device-card-width: 240px;
+}
+
+[data-device="tv"] .topbar {
+  padding: 1rem 2rem;
+  height: 80px;
+}
+
+[data-device="tv"] .nav-btn {
+  font-size: var(--device-nav-size);
+  padding: 0.6rem 1.2rem;
+}
+
+[data-device="tv"] .nav-btn svg {
+  width: 30px;
+  height: 30px;
+}
+
+[data-device="tv"] .section-header h1 {
+  font-size: 2rem;
+}
+
+[data-device="tv"] .section-sub {
+  font-size: 1.1rem;
+}
+
+[data-device="tv"] .movies-grid {
+  grid-template-columns: repeat(var(--device-grid-cols), 1fr);
+  gap: 1.5rem;
+}
+
+[data-device="tv"] .movie-card {
+  width: var(--device-card-width);
+}
+
+[data-device="tv"] .movie-title {
+  font-size: 1rem;
+}
+
+[data-device="tv"] .movie-year {
+  font-size: 0.9rem;
+}
+
+[data-device="tv"] .movie-poster-img {
+  border-radius: 12px;
+}
+
+[data-device="tv"] .chip {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+}
+
+[data-device="tv"] .music-card {
+  width: 200px;
+}
+
+[data-device="tv"] .music-title {
+  font-size: 1rem;
+}
+
+[data-device="tv"] .disney-card {
+  width: var(--device-card-width);
+}
+
+[data-device="tv"] .disney-card img {
+  border-radius: 12px;
+}
+
+[data-device="tv"] .section {
+  padding: 1rem 2rem;
+}
+
+[data-device="tv"] .match-card {
+  font-size: 1.1rem;
+}
+
+[data-device="tv"] .team-name {
+  font-size: 1.1rem;
+}
+
+[data-device="tv"] #news-player,
+[data-device="tv"] .player-wrapper iframe {
+  border-radius: 16px;
+}
+
+[data-device="tv"] .login-screen input {
+  font-size: 1.2rem;
+  padding: 1.2rem;
+}
+
+[data-device="tv"] .login-screen button {
+  font-size: 1.1rem;
+  padding: 1.2rem;
+}
+
+[data-device="tv"] .login-screen h1 {
+  font-size: 2.5rem;
+}
+
+[data-device="tv"] .splash-content {
+  transform: scale(1.5);
+}
+
+/* ===================== LOGIN SCREEN ===================== */
+.login-screen input:focus {
+  border-color: #c9a84c;
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.2);
+}
+
+.login-screen button:hover {
+  opacity: 0.9;
+}
+
+.login-screen button:active {
+  transform: scale(0.98);
+}

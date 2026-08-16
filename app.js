@@ -1,4 +1,201 @@
 /* ====================================================================
+
+// ===================== SISTEMA DE AUTENTICACIÓN LUXTIN TV =====================
+const AUTH_API = 'https://6a7d58526b15a2d266e69ab4.backend.base44.com/api/functions/luxtinAuth';
+let currentUser = null;
+let deviceMode = localStorage.getItem('luxtin-device') || 'mobile';
+
+// Inicializar device mode
+document.documentElement.setAttribute('data-device', deviceMode);
+function setDeviceMode(mode) {
+  deviceMode = mode;
+  localStorage.setItem('luxtin-device', mode);
+  document.documentElement.setAttribute('data-device', mode);
+  const btnM = document.getElementById('btn-mobile');
+  const btnT = document.getElementById('btn-tv');
+  if (btnM && btnT) {
+    if (mode === 'mobile') {
+      btnM.style.background = 'rgba(201,168,76,0.15)';
+      btnM.style.color = '#c9a84c';
+      btnT.style.background = 'transparent';
+      btnT.style.color = '#666';
+    } else {
+      btnT.style.background = 'rgba(201,168,76,0.15)';
+      btnT.style.color = '#c9a84c';
+      btnM.style.background = 'transparent';
+      btnM.style.color = '#666';
+    }
+  }
+}
+
+// Verificar sesión al cargar
+async function checkSession() {
+  const saved = localStorage.getItem('luxtin-user');
+  if (!saved) {
+    showLoginScreen();
+    return false;
+  }
+  
+  try {
+    const user = JSON.parse(saved);
+    // Verificar que la sesión sigue válida
+    const res = await fetch(AUTH_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'status', email: user.email })
+    });
+    const data = await res.json();
+    
+    if (data.success && !data.expired) {
+      currentUser = data.user;
+      showApp(data.user);
+      return true;
+    } else if (data.expired) {
+      showPaymentScreen();
+      return false;
+    } else {
+      localStorage.removeItem('luxtin-user');
+      showLoginScreen();
+      return false;
+    }
+  } catch (e) {
+    // Si no hay conexión, intentar usar sesión guardada
+    const savedUser = JSON.parse(saved);
+    currentUser = savedUser;
+    showApp(savedUser);
+    return true;
+  }
+}
+
+function showLoginScreen() {
+  const splash = document.getElementById('splash');
+  const app = document.getElementById('app');
+  const login = document.getElementById('login-screen');
+  const payment = document.getElementById('payment-screen');
+  if (splash) splash.style.display = 'none';
+  if (app) app.classList.add('hidden');
+  if (payment) payment.style.display = 'none';
+  if (login) login.style.display = 'flex';
+}
+
+function showPaymentScreen() {
+  const splash = document.getElementById('splash');
+  const app = document.getElementById('app');
+  const login = document.getElementById('login-screen');
+  const payment = document.getElementById('payment-screen');
+  if (splash) splash.style.display = 'none';
+  if (app) app.classList.add('hidden');
+  if (login) login.style.display = 'none';
+  if (payment) payment.style.display = 'flex';
+}
+
+function showApp(user) {
+  const splash = document.getElementById('splash');
+  const app = document.getElementById('app');
+  const login = document.getElementById('login-screen');
+  const payment = document.getElementById('payment-screen');
+  if (splash) splash.style.display = 'none';
+  if (login) login.style.display = 'none';
+  if (payment) payment.style.display = 'none';
+  if (app) app.classList.remove('hidden');
+  
+  // Mostrar info de usuario
+  const badge = document.getElementById('user-plan-badge');
+  const days = document.getElementById('user-days');
+  const logoutBtn = document.getElementById('logout-btn');
+  
+  if (badge && user.plan) {
+    const planNames = { trial: 'GRATIS', basic: 'Básico', standard: 'Estándar', premium: 'Premium', admin: 'Admin' };
+    badge.textContent = planNames[user.plan] || user.plan;
+    badge.style.display = 'block';
+  }
+  if (days && user.daysLeft !== undefined) {
+    days.textContent = user.daysLeft === 999 ? '∞ Ilimitado' : user.daysLeft + ' días';
+    days.style.display = 'block';
+  }
+  if (logoutBtn) logoutBtn.style.display = 'block';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const okEl = document.getElementById('login-success');
+  if (errEl) errEl.textContent = '';
+  if (okEl) okEl.textContent = 'Verificando...';
+  
+  try {
+    const res = await fetch(AUTH_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', email, password })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      localStorage.setItem('luxtin-user', JSON.stringify(data.user));
+      currentUser = data.user;
+      if (okEl) okEl.textContent = '¡Bienvenido!';
+      setTimeout(() => showApp(data.user), 500);
+    } else {
+      if (okEl) okEl.textContent = '';
+      if (errEl) errEl.textContent = data.error || 'Error al iniciar sesión';
+      if (data.expired) {
+        setTimeout(() => showPaymentScreen(), 1500);
+      }
+    }
+  } catch (e) {
+    if (okEl) okEl.textContent = '';
+    if (errEl) errEl.textContent = 'Error de conexión. Revisá tu internet.';
+  }
+}
+
+async function createTrial() {
+  const email = document.getElementById('login-email').value;
+  const errEl = document.getElementById('login-error');
+  const okEl = document.getElementById('login-success');
+  
+  if (!email || !email.includes('@')) {
+    if (errEl) errEl.textContent = 'Ingresá tu correo Gmail primero';
+    return;
+  }
+  
+  if (errEl) errEl.textContent = '';
+  if (okEl) okEl.textContent = 'Creando cuenta...';
+  
+  try {
+    const res = await fetch(AUTH_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'trial', email })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      localStorage.setItem('luxtin-user', JSON.stringify(data.user));
+      currentUser = data.user;
+      if (okEl) okEl.textContent = data.message;
+      // Auto-llenar la clave
+      document.getElementById('login-password').value = data.password;
+      setTimeout(() => showApp(data.user), 2000);
+    } else {
+      if (okEl) okEl.textContent = '';
+      if (errEl) errEl.textContent = data.error || 'Error al crear cuenta';
+    }
+  } catch (e) {
+    if (okEl) okEl.textContent = '';
+    if (errEl) errEl.textContent = 'Error de conexión';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('luxtin-user');
+  currentUser = null;
+  location.reload();
+}
+
+// ===================== FIN AUTENTICACIÓN =====================
+
    LUXTIN APP — Todo funciona SIN API KEYS
    
    APIs (todas gratuitas, sin registro):
@@ -23,7 +220,13 @@ function initApp() {
   setupNav();
   loadAllSports();
   loadMusicByGenre('trending');
-  loadMoviesByCategory('todas');
+  // Verificar sesión antes de cargar la app
+  checkSession().then(loggedIn => {
+    if (loggedIn) {
+      loadMoviesByCategory('todas');
+    }
+  });
+  //init_dummy
   setupMusicControls();
   setupMovieControls();
 }

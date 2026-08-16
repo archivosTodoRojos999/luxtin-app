@@ -12,12 +12,57 @@
 </head>
 <body>
 
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div id="login-screen" class="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0a0a14,#1a1a2e,#0a0a14);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;">
+  <div style="max-width:400px;width:100%;">
+    <img src="assets/luxtin-logo-new.png" alt="LUXTIN TV" style="width:140px;margin-bottom:1.5rem;border-radius:16px;box-shadow:0 8px 32px rgba(180,140,60,0.3);">
+    <h1 style="font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,#c9a84c,#f0d878);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem;">LUXTIN TV</h1>
+    <p style="color:#888;margin-bottom:2rem;">Ingresá tu correo y clave para acceder</p>
+    
+    <input type="email" id="login-email" placeholder="correo@gmail.com" style="width:100%;padding:0.9rem 1rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:1rem;margin-bottom:0.8rem;outline:none;box-sizing:border-box;" autocomplete="email">
+    <input type="password" id="login-password" placeholder="Tu clave de acceso" style="width:100%;padding:0.9rem 1rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:1rem;margin-bottom:1rem;outline:none;box-sizing:border-box;" autocomplete="current-password">
+    
+    <button onclick="doLogin()" style="width:100%;padding:0.9rem;background:linear-gradient(135deg,#c9a84c,#e6c060);border:none;border-radius:10px;color:#1a1a2e;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:0.5rem;">Iniciar Sesión</button>
+    <button onclick="createTrial()" style="width:100%;padding:0.9rem;background:transparent;border:1px solid rgba(201,168,76,0.3);border-radius:10px;color:#c9a84c;font-size:0.95rem;font-weight:600;cursor:pointer;margin-bottom:1rem;">Probar gratis 2 días</button>
+    
+    <div id="login-error" style="color:#e74c3c;font-size:0.85rem;min-height:1.2rem;margin-top:0.5rem;"></div>
+    <div id="login-success" style="color:#2ecc71;font-size:0.85rem;min-height:1.2rem;margin-top:0.5rem;"></div>
+    
+    <p style="color:#555;font-size:0.75rem;margin-top:1.5rem;">Para acceder, pedí tu clave al administrador.<br>Si no tenés cuenta, probá gratis 2 días.</p>
+  </div>
+</div>
+
+<!-- ===================== PAYMENT SCREEN (expirado) ===================== -->
+<div id="payment-screen" class="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1a0a0a,#2e1a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;">
+  <div style="max-width:400px;width:100%;">
+    <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+    <h1 style="color:#e74c3c;font-size:1.5rem;margin-bottom:1rem;">Tu acceso expiró</h1>
+    <p style="color:#aaa;margin-bottom:2rem;">Para seguir disfrutando de LUXTIN TV, pagá la factura:</p>
+    
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+      <p style="color:#888;font-size:0.85rem;margin-bottom:0.5rem;">Pagá a este número:</p>
+      <p style="font-size:1.6rem;font-weight:800;color:#c9a84c;letter-spacing:2px;">2634524659</p>
+      <p style="color:#666;font-size:0.8rem;margin-top:0.5rem;">Argentina · Transferencia / MercadoPago</p>
+    </div>
+    
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:1rem;margin-bottom:1.5rem;">
+      <p style="color:#888;font-size:0.85rem;margin-bottom:0.8rem;">Planes disponibles:</p>
+      <p style="color:#c9a84c;font-size:0.9rem;">💰 $15,000 → 10 días</p>
+      <p style="color:#c9a84c;font-size:0.9rem;">💰 $20,000 → 25 días</p>
+      <p style="color:#c9a84c;font-size:0.9rem;">💰 $25,000 → 30 días</p>
+    </div>
+    
+    <button onclick="location.reload()" style="width:100%;padding:0.9rem;background:rgba(255,255,255,0.1);border:none;border-radius:10px;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;">Ya pagué - Reintentar</button>
+    <button onclick="logout()" style="width:100%;padding:0.7rem;background:transparent;border:none;color:#666;font-size:0.85rem;cursor:pointer;margin-top:0.5rem;">Cerrar sesión</button>
+  </div>
+</div>
+
 <!-- ===================== SPLASH ANIMATION ===================== -->
 <div id="splash" class="splash-screen">
   <div class="splash-bg"></div>
   <div class="splash-content">
     <div class="luxtin-logo-wrap">
-      <img src="assets/luxtin-logo-512.png" alt="LUXTIN TV" class="luxtin-logo-img">
+      <img src="assets/luxtin-logo-new.png" alt="LUXTIN TV" class="luxtin-logo-img">
       <div class="luxtin-shine"></div>
     </div>
     <div class="luxtin-subtitle">FÚTBOL · MÚSICA · PELÍCULAS · TV</div>
@@ -29,7 +74,16 @@
 
   <!-- TOP BAR -->
   <header class="topbar">
-    <div class="topbar-logo"><img src="assets/luxtin-logo-128.png" alt="LUXTIN" class="topbar-logo-img"></div>
+    <div class="topbar-logo"><img src="assets/luxtin-logo-new.png" alt="LUXTIN" class="topbar-logo-img"></div>
+    <div id="user-info" style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;padding-right:0.5rem;">
+      <span id="user-plan-badge" style="background:linear-gradient(135deg,#c9a84c,#e6c060);color:#1a1a2e;font-size:0.7rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:6px;display:none;"></span>
+      <span id="user-days" style="color:#888;font-size:0.75rem;display:none;"></span>
+      <button onclick="logout()" id="logout-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;font-size:0.7rem;padding:0.3rem 0.6rem;border-radius:6px;cursor:pointer;display:none;">Salir</button>
+    </div>
+    <div id="device-selector" style="display:flex;gap:0.3rem;margin-left:0.5rem;">
+      <button onclick="setDeviceMode('mobile')" id="btn-mobile" style="background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:#c9a84c;font-size:0.7rem;padding:0.3rem 0.5rem;border-radius:6px;cursor:pointer;" title="Modo celular">📱</button>
+      <button onclick="setDeviceMode('tv')" id="btn-tv" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:#666;font-size:0.7rem;padding:0.3rem 0.5rem;border-radius:6px;cursor:pointer;" title="Modo televisor">📺</button>
+    </div>
     <nav class="nav-tabs">
       <button class="nav-btn active" data-section="deportes">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>

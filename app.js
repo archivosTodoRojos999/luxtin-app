@@ -1,4 +1,6 @@
 /* ====================================================================
+   LUXTIN TV - Aplicación de streaming
+   ==================================================================== */
 
 // ===================== SISTEMA DE AUTENTICACIÓN LUXTIN TV =====================
 const AUTH_API = 'https://6a7d58526b15a2d266e69ab4.backend.base44.com/api/functions/luxtinAuth';
@@ -255,16 +257,6 @@ function stopWelcomeMusic() {
 }
 
 // ===================== FIN AUTENTICACIÓN =====================
-
-   LUXTIN APP — Todo funciona SIN API KEYS
-   
-   APIs (todas gratuitas, sin registro):
-   - ESPN:        site.api.espn.com → fútbol en vivo (15 ligas)
-   - iTunes:      itunes.apple.com → música (tienda España = español)
-   - Apple RSS:   rss.applemarketingtools.com → tendencias musicales
-   - MOVIES_DB:  80+ películas locales en español
-   - VidSrc:      vsembed.ru → reproductor de video de las películas
-   ==================================================================== */
 
 // ===================== SPLASH =====================
 window.addEventListener('load', () => {

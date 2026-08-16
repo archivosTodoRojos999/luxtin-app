@@ -556,40 +556,27 @@ function setupMusicControls() {
     currentMusicIndex = (currentMusicIndex - 1 + musicPlaylist.length) % musicPlaylist.length;
     playMusic(currentMusicIndex);
   });
-  document.querySelectorAll('#music-genres .chip').forEach(chip => {
+  const minBtn = document.getElementById('minimize-player');
+  const expBtn = document.getElementById('expand-player');
+  if (minBtn) minBtn.addEventListener('click', () => { document.getElementById('music-player').classList.add('hidden'); document.getElementById('mini-player').classList.remove('hidden'); });
+  if (expBtn) expBtn.addEventListener('click', () => { document.getElementById('music-player').classList.remove('hidden'); document.getElementById('mini-player').classList.add('hidden'); });
+  document.querySelectorAll('#music-genres .chip, #music-genre-filters .chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      document.querySelectorAll('#music-genres .chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('#music-genres .chip, #music-genre-filters .chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       loadMusicByGenre(chip.dataset.genre);
     });
   });
 }
 
-function searchMusic(query) {
-  const container = document.getElementById('music-grid');
-  container.innerHTML = '<div class="loading">🔍 Buscando...</div>';
-  jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=50&country=es`).then(data => {
-    const tracks = (data.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
-    if (tracks.length === 0) { container.innerHTML = '<div class="loading">No se encontraron resultados.</div>'; return; }
-    musicPlaylist = tracks;
-    renderMusicCards(container, tracks);
-  }).catch(() => { container.innerHTML = '<div class="loading">Error al buscar.</div>'; });
-}
-
-  document.getElementById('music-search').addEventListener('keypress', e => { if (e.key === 'Enter') searchMusic(e.target.value); });
-  document.getElementById('next-track').addEventListener('click', () => { if (currentMusicIndex < musicPlaylist.length-1) playMusic(currentMusicIndex+1); });
-  document.getElementById('prev-track').addEventListener('click', () => { if (currentMusicIndex > 0) playMusic(currentMusicIndex-1); });
-  document.getElementById('minimize-player').addEventListener('click', () => { document.getElementById('music-player').classList.add('hidden'); document.getElementById('mini-player').classList.remove('hidden'); });
-  document.getElementById('expand-player').addEventListener('click', () => { document.getElementById('music-player').classList.remove('hidden'); document.getElementById('mini-player').classList.add('hidden'); });
-  document.querySelectorAll('#music-genre-filters .chip').forEach(chip => { chip.addEventListener('click', () => { document.querySelectorAll('#music-genre-filters .chip').forEach(c => c.classList.remove('active')); chip.classList.add('active'); loadMusicByGenre(chip.dataset.genre); }); });
-}
-
 async function searchMusic(query) {
   const container = document.getElementById('music-grid');
+  if (!container) return;
   container.innerHTML = '<div class="loading">🔍 Buscando...</div>';
   try {
     const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=50&country=es`);
     musicPlaylist = (d.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
+    if (musicPlaylist.length === 0) { container.innerHTML = '<div class="loading">No se encontraron resultados.</div>'; return; }
     renderMusicCards(container, musicPlaylist);
   } catch (e) { container.innerHTML = '<div class="loading">Error en la búsqueda.</div>'; }
 }

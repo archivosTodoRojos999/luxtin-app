@@ -3,7 +3,7 @@
    ==================================================================== */
 
 // ===================== SISTEMA DE AUTENTICACIÓN LUXTIN TV =====================
-const AUTH_API = 'https://6a7d58526b15a2d266e69ab4.backend.base44.com/api/functions/luxtinAuth';
+const AUTH_API = 'https://base44.app/api/apps/6a7d58526b15a2d266e69ab4/functions/luxtinAuth';
 let currentUser = null;
 let deviceMode = localStorage.getItem('luxtin-device') || 'mobile';
 
@@ -258,22 +258,23 @@ function stopWelcomeMusic() {
 
 // ===================== FIN AUTENTICACIÓN =====================
 
-// ===================== INIT (sin splash, login directo) =====================
+// ===================== INIT (con animación de entrada) =====================
 window.addEventListener('DOMContentLoaded', () => {
-  // Ocultar splash si existe
+  // Mostrar splash con animación
   const splash = document.getElementById('splash');
-  if (splash) splash.style.display = 'none';
-  // Verificar sesión inmediatamente
-  checkSession().then(loggedIn => {
-    if (loggedIn) {
-      document.getElementById('app').classList.remove('hidden');
-      initApp();
-    }
-    // Si no hay sesión: checkSession ya muestra el login
-  }).catch(() => {
-    // Si hay error, mostrar login igual
-    showLoginScreen();
-  });
+  
+  // Esperar a que termine la animación del splash (5.2s de animación + 0.8s de fade)
+  setTimeout(() => {
+    checkSession().then(loggedIn => {
+      if (loggedIn) {
+        document.getElementById('app').classList.remove('hidden');
+        initApp();
+      }
+      // Si no hay sesión: checkSession ya muestra el login
+    }).catch(() => {
+      showLoginScreen();
+    });
+  }, 6000); // 6 segundos de splash
 });
 
 // ===================== INIT =====================

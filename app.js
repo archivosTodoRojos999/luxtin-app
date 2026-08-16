@@ -51,7 +51,10 @@ async function checkSession() {
       showApp(data.user);
       return true;
     } else if (data.expired) {
-      showPaymentScreen();
+      // Sesión expirada: borrar y mostrar LOGIN (no pantalla de pago)
+      // La pantalla de pago solo aparece cuando el usuario intenta entrar con su clave
+      localStorage.removeItem('luxtin-user');
+      showLoginScreen();
       return false;
     } else {
       localStorage.removeItem('luxtin-user');
@@ -145,6 +148,7 @@ async function doLogin() {
       if (okEl) okEl.textContent = '';
       if (errEl) errEl.textContent = data.error || 'Error al iniciar sesión';
       if (data.expired) {
+        // Mostrar pantalla de pago solo cuando el usuario intenta entrar con cuenta expirada
         setTimeout(() => showPaymentScreen(), 1500);
       }
     }
@@ -266,14 +270,14 @@ function stopWelcomeMusic() {
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.getElementById('splash').style.display = 'none';
-    // NO mostrar la app todavía — primero verificar sesión
+    // Verificar si hay sesión guardada válida
     checkSession().then(loggedIn => {
       if (loggedIn) {
+        // Sesión válida: entrar directo a la app
         document.getElementById('app').classList.remove('hidden');
         initApp();
       }
-      // Si no está logueado, checkSession ya muestra el login screen
-      // y la música de bienvenida
+      // Si no hay sesión o expiró: checkSession ya muestra el login screen
     });
   }, 6000);
 });

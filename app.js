@@ -6,6 +6,7 @@
 const AUTH_API = 'https://base44.app/api/apps/6a7d58526b15a2d266e69ab4/functions/luxtinAuth';
 let currentUser = null;
 let deviceMode = localStorage.getItem('luxtin-device') || 'mobile';
+let appInitialized = false;
 
 // Inicializar device mode
 document.documentElement.setAttribute('data-device', deviceMode);
@@ -51,10 +52,9 @@ async function checkSession() {
     if (data.success && !data.expired) {
       currentUser = data.user;
       showApp(data.user);
+      initApp();
       return true;
     } else if (data.expired) {
-      // Sesión expirada: borrar y mostrar LOGIN (no pantalla de pago)
-      // La pantalla de pago solo aparece cuando el usuario intenta entrar con su clave
       localStorage.removeItem('luxtin-user');
       showLoginScreen();
       return false;
@@ -68,6 +68,7 @@ async function checkSession() {
     const savedUser = JSON.parse(saved);
     currentUser = savedUser;
     showApp(savedUser);
+    initApp();
     return true;
   }
 }
@@ -81,7 +82,6 @@ function showLoginScreen() {
   if (app) app.classList.add('hidden');
   if (payment) payment.style.display = 'none';
   if (login) login.style.display = 'flex';
-  // Activar música de bienvenida
   startWelcomeMusic();
 }
 
@@ -105,7 +105,6 @@ function showApp(user) {
   if (login) login.style.display = 'none';
   if (payment) payment.style.display = 'none';
   if (app) app.classList.remove('hidden');
-  // Detener música de bienvenida
   stopWelcomeMusic();
   
   // Mostrar info de usuario
@@ -145,12 +144,12 @@ async function doLogin() {
       localStorage.setItem('luxtin-user', JSON.stringify(data.user));
       currentUser = data.user;
       if (okEl) okEl.textContent = '¡Bienvenido!';
-      setTimeout(() => showApp(data.user), 500);
+      showApp(data.user);
+      initApp();
     } else {
       if (okEl) okEl.textContent = '';
       if (errEl) errEl.textContent = data.error || 'Error al iniciar sesión';
       if (data.expired) {
-        // Mostrar pantalla de pago solo cuando el usuario intenta entrar con cuenta expirada
         setTimeout(() => showPaymentScreen(), 1500);
       }
     }
@@ -185,9 +184,9 @@ async function createTrial() {
       localStorage.setItem('luxtin-user', JSON.stringify(data.user));
       currentUser = data.user;
       if (okEl) okEl.textContent = data.message;
-      // Auto-llenar la clave
       document.getElementById('login-password').value = data.password;
-      setTimeout(() => showApp(data.user), 2000);
+      showApp(data.user);
+      initApp();
     } else {
       if (okEl) okEl.textContent = '';
       if (errEl) errEl.textContent = data.error || 'Error al crear cuenta';
@@ -201,11 +200,12 @@ async function createTrial() {
 function logout() {
   localStorage.removeItem('luxtin-user');
   currentUser = null;
+  appInitialized = false;
   location.reload();
 }
 
 // ===================== MÚSICA DE BIENVENIDA =====================
-const WELCOME_MUSIC_VIDEO_ID = 'uE-TADy-oN0'; // Upbeat happy background music (royalty-free)
+const WELCOME_MUSIC_VIDEO_ID = 'uE-TADy-oN0';
 let welcomeMusicPlaying = false;
 
 function startWelcomeMusic() {
@@ -214,15 +214,12 @@ function startWelcomeMusic() {
   const activateBtn = document.getElementById('music-activate');
   if (!frame || !container) return;
   
-  // Cargar el video de música
   frame.src = `https://www.youtube.com/embed/${WELCOME_MUSIC_VIDEO_ID}?autoplay=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${WELCOME_MUSIC_VIDEO_ID}&rel=0`;
   frame.style.display = 'block';
   welcomeMusicPlaying = true;
   
-  // Mostrar botón de activación por si el navegador bloquea el autoplay
   if (activateBtn) {
     activateBtn.style.display = 'block';
-    // Ocultar después de 5 segundos
     setTimeout(() => {
       if (welcomeMusicPlaying && activateBtn) {
         activateBtn.style.display = 'none';
@@ -230,12 +227,10 @@ function startWelcomeMusic() {
     }, 8000);
   }
   
-  // Click en cualquier parte del login screen también activa la música
   const loginScreen = document.getElementById('login-screen');
   if (loginScreen) {
     loginScreen.addEventListener('click', function onceClick() {
       if (frame && welcomeMusicPlaying) {
-        // Re-intentar autoplay
         frame.src = frame.src;
       }
       loginScreen.removeEventListener('click', onceClick);
@@ -258,27 +253,18 @@ function stopWelcomeMusic() {
 
 // ===================== FIN AUTENTICACIÓN =====================
 
-// ===================== INIT (con animación de entrada) =====================
+// ===================== INIT — Mostrar login directo SIN splash =====================
 window.addEventListener('DOMContentLoaded', () => {
-  // Mostrar splash con animación
-  const splash = document.getElementById('splash');
-  
-  // Esperar a que termine la animación del splash (5.2s de animación + 0.8s de fade)
-  setTimeout(() => {
-    checkSession().then(loggedIn => {
-      if (loggedIn) {
-        document.getElementById('app').classList.remove('hidden');
-        initApp();
-      }
-      // Si no hay sesión: checkSession ya muestra el login
-    }).catch(() => {
-      showLoginScreen();
-    });
-  }, 6000); // 6 segundos de splash
+  // Sin animación de splash — ir directo a checkSession
+  checkSession().catch(() => {
+    showLoginScreen();
+  });
 });
 
-// ===================== INIT =====================
+// ===================== INIT APP =====================
 function initApp() {
+  if (appInitialized) return;
+  appInitialized = true;
   setupNav();
   loadAllSports();
   loadMusicByGenre('trending');
@@ -286,6 +272,7 @@ function initApp() {
   setupMusicControls();
   setupMovieControls();
 }
+
 
 function setupNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -334,6 +321,7 @@ let currentLeagueFilter = 'all';
 
 async function loadAllSports() {
   const container = document.getElementById('matches-list');
+  if (!container) return;
   container.innerHTML = '<div class="loading">📡 Conectando con ESPN... cargando 15 ligas...</div>';
   allMatches = [];
 
@@ -383,6 +371,7 @@ async function loadAllSports() {
 
 function renderMatches() {
   const container = document.getElementById('matches-list');
+  if (!container) return;
   let filtered = allMatches;
   if (currentLeagueFilter !== 'all') {
     const name = ESPN_LEAGUES.find(l => l.code === currentLeagueFilter)?.name;
@@ -424,7 +413,6 @@ document.addEventListener('click', e => {
     renderMatches();
   }
 });
-document.getElementById('refresh-matches')?.addEventListener('click', loadAllSports);
 
 // ===================== MÚSICA — iTunes + Apple RSS =====================
 let musicPlaylist = [];
@@ -438,7 +426,6 @@ const MUSIC_GENRES = {
   salsa: 'salsa', bachata: 'bachata', romantica: 'balada romantica', rap: 'rap en español', trap: 'trap latino',
 };
 
-// Términos de búsqueda multi-consulta para años específicos (mezcla varios artistas/estilos actuales)
 const YEAR_SEARCH_TERMS = {
   hits2026: ['top hits 2026', 'exitos 2026', 'reggaeton 2026', 'pop 2026', 'musica nueva 2026'],
   clasicos2015: ['top hits 2015', 'exitos 2015', 'pop 2015', 'reggaeton 2015', 'rock 2015'],
@@ -456,12 +443,12 @@ function dedupeTracks(tracks) {
 
 async function loadMusicByGenre(genre) {
   const container = document.getElementById('music-grid');
+  if (!container) return;
   if (loadedGenres[genre]) { musicPlaylist = loadedGenres[genre]; renderMusicCards(container, musicPlaylist); return; }
   container.innerHTML = '<div class="loading">🎵 Cargando canciones...</div>';
   try {
     let tracks = [];
 
-    // Tendencias globales (Apple Music charts)
     if (genre === 'trending') {
       try {
         const res = await fetch('https://rss.applemarketingtools.com/api/v2/us/music/most-popular/50/songs.json');
@@ -471,7 +458,6 @@ async function loadMusicByGenre(genre) {
       } catch (e) {}
     }
 
-    // Éxitos 2026 / Clásicos 2015 — múltiples búsquedas combinadas para más variedad
     if ((genre === 'hits2026' || genre === 'clasicos2015') && YEAR_SEARCH_TERMS[genre]) {
       const queries = YEAR_SEARCH_TERMS[genre];
       const results = await Promise.allSettled(
@@ -486,14 +472,12 @@ async function loadMusicByGenre(genre) {
       tracks = dedupeTracks(tracks);
     }
 
-    // Géneros normales
     if (tracks.length === 0 && genre !== 'trending') {
       const term = MUSIC_GENRES[genre] || genre;
       const data = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=50&country=es`);
       tracks = (data.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
     }
 
-    // Relleno extra si hace falta más variedad (géneros normales, no trending/años)
     if (tracks.length < 20 && genre !== 'trending' && genre !== 'hits2026' && genre !== 'clasicos2015') {
       try {
         const data2 = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(MUSIC_GENRES[genre]+' 2026')}&media=music&limit=25&country=es`);
@@ -524,7 +508,6 @@ function renderMusicCards(container, tracks) {
   container.innerHTML = tracks.map((t, i) => `<div class="music-card" onclick="playMusic(${i})"><img class="music-thumb" src="${t.artwork}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22><rect fill=%22%231e1e2e%22 width=%22300%22 height=%22300%22/><text fill=%22%238888a0%22 x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22 font-size=%2240%22>🎵</text></svg>'"><div class="music-info"><div class="music-title">${t.title}</div><div class="music-channel">${t.artist}</div></div></div>`).join('');
 }
 
-// Buscar canción en YouTube vía backend function y reproducir completa
 async function playMusic(i) {
   if (i < 0 || i >= musicPlaylist.length) return;
   currentMusicIndex = i;
@@ -537,7 +520,6 @@ async function playMusic(i) {
 
   const ytPlayer = document.getElementById('music-youtube-player');
   if (ytPlayer) {
-    // Mostrar estado de carga
     ytPlayer.src = '';
     document.getElementById('now-playing-title').textContent = t.title + ' (buscando...)';
 
@@ -552,13 +534,11 @@ async function playMusic(i) {
         ytPlayer.src = `https://www.youtube.com/embed/${data.videoId}?autoplay=1&rel=0`;
         document.getElementById('now-playing-title').textContent = t.title;
       } else {
-        // Fallback: abrir búsqueda en YouTube
         ytPlayer.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(t.title + ' ' + t.artist)}&autoplay=1`;
         document.getElementById('now-playing-title').textContent = t.title;
       }
     } catch (e) {
-      // Si falla el backend, usar búsqueda directa de YouTube
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(t.title + ' ' + t.artist + ' official audio')}`, '_blank');
+      ytPlayer.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(t.title + ' ' + t.artist)}&autoplay=1`;
       document.getElementById('now-playing-title').textContent = t.title;
     }
   }
@@ -567,6 +547,35 @@ async function playMusic(i) {
 
 function setupMusicControls() {
   document.getElementById('music-search-btn').addEventListener('click', () => { const q = document.getElementById('music-search').value; if (q.trim()) searchMusic(q); });
+  document.getElementById('music-search').addEventListener('keypress', e => { if (e.key === 'Enter') searchMusic(e.target.value); });
+  document.getElementById('next-track').addEventListener('click', () => {
+    currentMusicIndex = (currentMusicIndex + 1) % musicPlaylist.length;
+    playMusic(currentMusicIndex);
+  });
+  document.getElementById('prev-track').addEventListener('click', () => {
+    currentMusicIndex = (currentMusicIndex - 1 + musicPlaylist.length) % musicPlaylist.length;
+    playMusic(currentMusicIndex);
+  });
+  document.querySelectorAll('#music-genres .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#music-genres .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      loadMusicByGenre(chip.dataset.genre);
+    });
+  });
+}
+
+function searchMusic(query) {
+  const container = document.getElementById('music-grid');
+  container.innerHTML = '<div class="loading">🔍 Buscando...</div>';
+  jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=50&country=es`).then(data => {
+    const tracks = (data.results||[]).filter(s => s.previewUrl).map(s => ({ title: s.trackName, artist: s.artistName, artwork: (s.artworkUrl100||'').replace('100x100','300x300'), previewUrl: s.previewUrl, itunesUrl: s.trackViewUrl||'' }));
+    if (tracks.length === 0) { container.innerHTML = '<div class="loading">No se encontraron resultados.</div>'; return; }
+    musicPlaylist = tracks;
+    renderMusicCards(container, tracks);
+  }).catch(() => { container.innerHTML = '<div class="loading">Error al buscar.</div>'; });
+}
+
   document.getElementById('music-search').addEventListener('keypress', e => { if (e.key === 'Enter') searchMusic(e.target.value); });
   document.getElementById('next-track').addEventListener('click', () => { if (currentMusicIndex < musicPlaylist.length-1) playMusic(currentMusicIndex+1); });
   document.getElementById('prev-track').addEventListener('click', () => { if (currentMusicIndex > 0) playMusic(currentMusicIndex-1); });

@@ -258,20 +258,22 @@ function stopWelcomeMusic() {
 
 // ===================== FIN AUTENTICACIÓN =====================
 
-// ===================== SPLASH =====================
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.getElementById('splash').style.display = 'none';
-    // Verificar si hay sesión guardada válida
-    checkSession().then(loggedIn => {
-      if (loggedIn) {
-        // Sesión válida: entrar directo a la app
-        document.getElementById('app').classList.remove('hidden');
-        initApp();
-      }
-      // Si no hay sesión o expiró: checkSession ya muestra el login screen
-    });
-  }, 6000);
+// ===================== INIT (sin splash, login directo) =====================
+window.addEventListener('DOMContentLoaded', () => {
+  // Ocultar splash si existe
+  const splash = document.getElementById('splash');
+  if (splash) splash.style.display = 'none';
+  // Verificar sesión inmediatamente
+  checkSession().then(loggedIn => {
+    if (loggedIn) {
+      document.getElementById('app').classList.remove('hidden');
+      initApp();
+    }
+    // Si no hay sesión: checkSession ya muestra el login
+  }).catch(() => {
+    // Si hay error, mostrar login igual
+    showLoginScreen();
+  });
 });
 
 // ===================== INIT =====================

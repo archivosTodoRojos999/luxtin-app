@@ -76,6 +76,8 @@ function showLoginScreen() {
   if (app) app.classList.add('hidden');
   if (payment) payment.style.display = 'none';
   if (login) login.style.display = 'flex';
+  // Activar música de bienvenida
+  startWelcomeMusic();
 }
 
 function showPaymentScreen() {
@@ -98,6 +100,8 @@ function showApp(user) {
   if (login) login.style.display = 'none';
   if (payment) payment.style.display = 'none';
   if (app) app.classList.remove('hidden');
+  // Detener música de bienvenida
+  stopWelcomeMusic();
   
   // Mostrar info de usuario
   const badge = document.getElementById('user-plan-badge');
@@ -194,6 +198,58 @@ function logout() {
   location.reload();
 }
 
+// ===================== MÚSICA DE BIENVENIDA =====================
+const WELCOME_MUSIC_VIDEO_ID = 'uE-TADy-oN0'; // Upbeat happy background music (royalty-free)
+let welcomeMusicPlaying = false;
+
+function startWelcomeMusic() {
+  const container = document.getElementById('welcome-music-container');
+  const frame = document.getElementById('welcome-music-frame');
+  const activateBtn = document.getElementById('music-activate');
+  if (!frame || !container) return;
+  
+  // Cargar el video de música
+  frame.src = `https://www.youtube.com/embed/${WELCOME_MUSIC_VIDEO_ID}?autoplay=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${WELCOME_MUSIC_VIDEO_ID}&rel=0`;
+  frame.style.display = 'block';
+  welcomeMusicPlaying = true;
+  
+  // Mostrar botón de activación por si el navegador bloquea el autoplay
+  if (activateBtn) {
+    activateBtn.style.display = 'block';
+    // Ocultar después de 5 segundos
+    setTimeout(() => {
+      if (welcomeMusicPlaying && activateBtn) {
+        activateBtn.style.display = 'none';
+      }
+    }, 8000);
+  }
+  
+  // Click en cualquier parte del login screen también activa la música
+  const loginScreen = document.getElementById('login-screen');
+  if (loginScreen) {
+    loginScreen.addEventListener('click', function onceClick() {
+      if (frame && welcomeMusicPlaying) {
+        // Re-intentar autoplay
+        frame.src = frame.src;
+      }
+      loginScreen.removeEventListener('click', onceClick);
+    }, { once: true });
+  }
+}
+
+function stopWelcomeMusic() {
+  const frame = document.getElementById('welcome-music-frame');
+  const activateBtn = document.getElementById('music-activate');
+  if (frame) {
+    frame.src = '';
+    frame.style.display = 'none';
+  }
+  if (activateBtn) {
+    activateBtn.style.display = 'none';
+  }
+  welcomeMusicPlaying = false;
+}
+
 // ===================== FIN AUTENTICACIÓN =====================
 
    LUXTIN APP — Todo funciona SIN API KEYS
@@ -210,8 +266,15 @@ function logout() {
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.getElementById('splash').style.display = 'none';
-    document.getElementById('app').classList.remove('hidden');
-    initApp();
+    // NO mostrar la app todavía — primero verificar sesión
+    checkSession().then(loggedIn => {
+      if (loggedIn) {
+        document.getElementById('app').classList.remove('hidden');
+        initApp();
+      }
+      // Si no está logueado, checkSession ya muestra el login screen
+      // y la música de bienvenida
+    });
   }, 6000);
 });
 
@@ -220,13 +283,7 @@ function initApp() {
   setupNav();
   loadAllSports();
   loadMusicByGenre('trending');
-  // Verificar sesión antes de cargar la app
-  checkSession().then(loggedIn => {
-    if (loggedIn) {
-      loadMoviesByCategory('todas');
-    }
-  });
-  //init_dummy
+  loadMoviesByCategory('todas');
   setupMusicControls();
   setupMovieControls();
 }
@@ -1193,7 +1250,7 @@ function switchNewsChannel(channelKey) {
   if (!ch) return;
   const iframe = document.getElementById('news-player');
   if (!iframe) return;
-  iframe.src = `https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=1`;
+  iframe.src = `https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=0`;
   const nameEl = document.getElementById('news-channel-name');
   if (nameEl) nameEl.textContent = `EN VIVO · ${ch.name}`;
 }

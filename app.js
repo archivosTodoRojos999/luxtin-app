@@ -685,10 +685,12 @@ function renderMoviesPage(container) {
     const posterUrl = posterBase ? `${posterBase}w342/${m.pi}` : '';
     const posterUrl2 = posterBase ? `${posterBase}w185/${m.pi}` : '';
     const posterUrl3 = posterBase ? `${posterBase}original/${m.pi}` : '';
-    const placeholderHtml = `<div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem;aspect-ratio:2/3;position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:10px;">
-           <div style="font-size:2.5rem;margin-bottom:0.6rem;opacity:0.85;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${icon}</div>
-           <div style="font-size:0.9rem;font-weight:700;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);line-height:1.25;max-width:90%;">${m.t}</div>
-           <div style="font-size:0.7rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.y || ''}</div>
+    const placeholderHtml = `<div class="movie-poster-placeholder" style="background:linear-gradient(160deg, ${c1}, ${c2});display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.2rem;aspect-ratio:2/3;position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:10px;">
+           <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 70%);"></div>
+           <div style="font-size:3rem;margin-bottom:0.8rem;opacity:0.7;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));position:relative;z-index:1;">${icon}</div>
+           <div style="font-size:0.95rem;font-weight:800;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.7);line-height:1.3;max-width:90%;position:relative;z-index:1;">${m.t}</div>
+           <div style="font-size:0.75rem;color:rgba(255,255,255,0.7);margin-top:0.4rem;position:relative;z-index:1;">${m.y || ''}</div>
+           <div style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-top:0.6rem;text-transform:uppercase;letter-spacing:1px;position:relative;z-index:1;">${m.g.slice(0,2).join(' · ')}</div>
          </div>`;
     const posterHtml = posterUrl
       ? `<div style="position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;border-radius:10px;"><img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="if(this.src!=='${posterUrl2}'){this.src='${posterUrl2}';}else if(this.src!=='${posterUrl3}'){this.src='${posterUrl3}';}else{this.style.display='none';this.nextElementSibling.style.display='flex';}">${placeholderHtml}</div>`

@@ -861,122 +861,367 @@ audio {
 
 /* ===================== DEVICE MODES ===================== */
 
-/* MODO CELULAR (por defecto) */
+/* MODO CELULAR — optimizado para pantallas de telefono */
 [data-device="mobile"] {
-  --device-scale: 1;
   --device-grid-cols: 2;
-  --device-font-scale: 1;
-  --device-nav-size: 0.8rem;
-  --device-card-width: 150px;
+  --device-font-scale: 1.15;
+  --device-nav-size: 0.82rem;
+  --device-card-width: 100%;
+  --device-padding: 1rem;
+  --device-gap: 0.7rem;
+  --device-section-h1: 1.4rem;
+  --device-section-sub: 0.85rem;
+  --device-chip-size: 0.8rem;
+  --device-topbar-height: 56px;
+  --device-icon-size: 20px;
 }
 
-/* MODO TELEVISOR */
+[data-device="mobile"] .topbar {
+  height: var(--device-topbar-height);
+  padding: 0 0.8rem;
+}
+
+[data-device="mobile"] .nav-btn {
+  font-size: var(--device-nav-size);
+  padding: 0.4rem 0.6rem;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+[data-device="mobile"] .nav-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+[data-device="mobile"] .nav-btn span {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+[data-device="mobile"] .section {
+  padding: var(--device-padding);
+}
+
+[data-device="mobile"] .section-header h1 {
+  font-size: var(--device-section-h1);
+}
+
+[data-device="mobile"] .section-sub {
+  font-size: var(--device-section-sub);
+}
+
+[data-device="mobile"] .movies-grid {
+  grid-template-columns: repeat(var(--device-grid-cols), 1fr);
+  gap: var(--device-gap);
+}
+
+[data-device="mobile"] .movie-card {
+  width: 100%;
+  border-radius: 10px;
+}
+
+[data-device="mobile"] .movie-poster-img {
+  border-radius: 10px;
+  min-height: 180px;
+  object-fit: cover;
+}
+
+[data-device="mobile"] .movie-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+[data-device="mobile"] .movie-year {
+  font-size: 0.72rem;
+}
+
+[data-device="mobile"] .music-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--device-gap);
+}
+
+[data-device="mobile"] .music-card {
+  width: 100%;
+  border-radius: 10px;
+}
+
+[data-device="mobile"] .music-card img {
+  border-radius: 10px;
+  min-height: 150px;
+  object-fit: cover;
+}
+
+[data-device="mobile"] .music-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+[data-device="mobile"] .music-artist {
+  font-size: 0.72rem;
+}
+
+[data-device="mobile"] .disney-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--device-gap);
+}
+
+[data-device="mobile"] .disney-card {
+  width: 100%;
+}
+
+[data-device="mobile"] .disney-card img {
+  border-radius: 10px;
+  min-height: 110px;
+  object-fit: cover;
+}
+
+[data-device="mobile"] .chip {
+  font-size: var(--device-chip-size);
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+}
+
+[data-device="mobile"] .match-card {
+  font-size: 0.85rem;
+  padding: 0.7rem;
+}
+
+[data-device="mobile"] .team-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+[data-device="mobile"] .login-screen input {
+  font-size: 1.1rem;
+  padding: 1rem;
+}
+
+[data-device="mobile"] .login-screen button {
+  font-size: 1rem;
+  padding: 1rem;
+}
+
+[data-device="mobile"] .login-screen h1 {
+  font-size: 2rem;
+}
+
+[data-device="mobile"] .topbar-logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+[data-device="mobile"] #user-plan-badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+}
+
+[data-device="mobile"] #logout-btn {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+}
+
+[data-device="mobile"] .player-wrapper iframe {
+  width: 100%;
+  height: 220px;
+  border-radius: 10px;
+}
+
+/* MODO TELEVISOR — todo grande y organizado */
 [data-device="tv"] {
-  --device-scale: 1.6;
-  --device-grid-cols: 5;
-  --device-font-scale: 1.4;
-  --device-nav-size: 1.2rem;
-  --device-card-width: 240px;
+  --device-grid-cols: 6;
+  --device-font-scale: 1.6;
+  --device-nav-size: 1.3rem;
+  --device-card-width: 260px;
+  --device-padding: 2.5rem;
+  --device-gap: 2rem;
+  --device-section-h1: 2.8rem;
+  --device-section-sub: 1.3rem;
+  --device-chip-size: 1.15rem;
+  --device-topbar-height: 90px;
+  --device-icon-size: 34px;
 }
 
 [data-device="tv"] .topbar {
-  padding: 1rem 2rem;
-  height: 80px;
+  padding: 0 2.5rem;
+  height: var(--device-topbar-height);
 }
 
 [data-device="tv"] .nav-btn {
   font-size: var(--device-nav-size);
-  padding: 0.6rem 1.2rem;
+  padding: 0.7rem 1.5rem;
+  flex-direction: row;
+  gap: 0.5rem;
 }
 
 [data-device="tv"] .nav-btn svg {
-  width: 30px;
-  height: 30px;
+  width: var(--device-icon-size);
+  height: var(--device-icon-size);
 }
 
-[data-device="tv"] .section-header h1 {
-  font-size: 2rem;
+[data-device="tv"] .nav-btn span {
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
-[data-device="tv"] .section-sub {
-  font-size: 1.1rem;
-}
-
-[data-device="tv"] .movies-grid {
-  grid-template-columns: repeat(var(--device-grid-cols), 1fr);
-  gap: 1.5rem;
-}
-
-[data-device="tv"] .movie-card {
-  width: var(--device-card-width);
-}
-
-[data-device="tv"] .movie-title {
-  font-size: 1rem;
-}
-
-[data-device="tv"] .movie-year {
-  font-size: 0.9rem;
-}
-
-[data-device="tv"] .movie-poster-img {
-  border-radius: 12px;
-}
-
-[data-device="tv"] .chip {
-  font-size: 1rem;
-  padding: 0.6rem 1.2rem;
-}
-
-[data-device="tv"] .music-card {
-  width: 200px;
-}
-
-[data-device="tv"] .music-title {
-  font-size: 1rem;
-}
-
-[data-device="tv"] .disney-card {
-  width: var(--device-card-width);
-}
-
-[data-device="tv"] .disney-card img {
+[data-device="tv"] .topbar-logo-img {
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
 }
 
 [data-device="tv"] .section {
-  padding: 1rem 2rem;
+  padding: var(--device-padding);
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+[data-device="tv"] .section-header h1 {
+  font-size: var(--device-section-h1);
+  margin-bottom: 0.4rem;
+}
+
+[data-device="tv"] .section-sub {
+  font-size: var(--device-section-sub);
+  margin-bottom: 1.5rem;
+}
+
+[data-device="tv"] .movies-grid {
+  grid-template-columns: repeat(var(--device-grid-cols), 1fr);
+  gap: var(--device-gap);
+}
+
+[data-device="tv"] .movie-card {
+  width: 100%;
+  border-radius: 14px;
+}
+
+[data-device="tv"] .movie-poster-img {
+  border-radius: 14px;
+  min-height: 380px;
+  object-fit: cover;
+}
+
+[data-device="tv"] .movie-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+[data-device="tv"] .movie-year {
+  font-size: 1rem;
+}
+
+[data-device="tv"] .music-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--device-gap);
+}
+
+[data-device="tv"] .music-card {
+  width: 100%;
+  border-radius: 14px;
+}
+
+[data-device="tv"] .music-card img {
+  border-radius: 14px;
+  min-height: 260px;
+  object-fit: cover;
+}
+
+[data-device="tv"] .music-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+[data-device="tv"] .music-artist {
+  font-size: 1rem;
+}
+
+[data-device="tv"] .disney-grid {
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--device-gap);
+}
+
+[data-device="tv"] .disney-card {
+  width: 100%;
+}
+
+[data-device="tv"] .disney-card img {
+  border-radius: 14px;
+  min-height: 200px;
+  object-fit: cover;
+}
+
+[data-device="tv"] .chip {
+  font-size: var(--device-chip-size);
+  padding: 0.7rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
 [data-device="tv"] .match-card {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  padding: 1.2rem;
+  border-radius: 14px;
 }
 
 [data-device="tv"] .team-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+[data-device="tv"] #user-plan-badge {
+  font-size: 0.9rem;
+  padding: 0.3rem 0.8rem;
+}
+
+[data-device="tv"] #logout-btn {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+}
+
+[data-device="tv"] .player-wrapper iframe {
+  width: 100%;
+  height: 600px;
+  border-radius: 16px;
+}
+
+[data-device="tv"] .login-screen input {
+  font-size: 1.3rem;
+  padding: 1.3rem;
+  border-radius: 12px;
+}
+
+[data-device="tv"] .login-screen button {
+  font-size: 1.2rem;
+  padding: 1.3rem;
+  border-radius: 12px;
+}
+
+[data-device="tv"] .login-screen h1 {
+  font-size: 3rem;
+}
+
+[data-device="tv"] .search-bar input {
   font-size: 1.1rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+}
+
+[data-device="tv"] .search-bar button {
+  font-size: 1.1rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+}
+
+[data-device="tv"] .mini-player {
+  font-size: 1rem;
 }
 
 [data-device="tv"] #news-player,
 [data-device="tv"] .player-wrapper iframe {
   border-radius: 16px;
-}
-
-[data-device="tv"] .login-screen input {
-  font-size: 1.2rem;
-  padding: 1.2rem;
-}
-
-[data-device="tv"] .login-screen button {
-  font-size: 1.1rem;
-  padding: 1.2rem;
-}
-
-[data-device="tv"] .login-screen h1 {
-  font-size: 2.5rem;
-}
-
-[data-device="tv"] .splash-content {
-  transform: scale(1.5);
 }
 
 /* ===================== LOGIN SCREEN ===================== */

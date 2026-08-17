@@ -14,6 +14,29 @@ function setDeviceMode(mode) {
   deviceMode = mode;
   localStorage.setItem('luxtin-device', mode);
   document.documentElement.setAttribute('data-device', mode);
+  
+  // Botones del login screen
+  const loginBtnM = document.getElementById('login-btn-mobile');
+  const loginBtnT = document.getElementById('login-btn-tv');
+  if (loginBtnM && loginBtnT) {
+    if (mode === 'mobile') {
+      loginBtnM.style.background = 'rgba(201,168,76,0.15)';
+      loginBtnM.style.borderColor = 'rgba(201,168,76,0.4)';
+      loginBtnM.style.color = '#c9a84c';
+      loginBtnT.style.background = 'transparent';
+      loginBtnT.style.borderColor = 'rgba(255,255,255,0.1)';
+      loginBtnT.style.color = '#666';
+    } else {
+      loginBtnT.style.background = 'rgba(201,168,76,0.15)';
+      loginBtnT.style.borderColor = 'rgba(201,168,76,0.4)';
+      loginBtnT.style.color = '#c9a84c';
+      loginBtnM.style.background = 'transparent';
+      loginBtnM.style.borderColor = 'rgba(255,255,255,0.1)';
+      loginBtnM.style.color = '#666';
+    }
+  }
+  
+  // Botones del topbar (si existen)
   const btnM = document.getElementById('btn-mobile');
   const btnT = document.getElementById('btn-tv');
   if (btnM && btnT) {
@@ -659,18 +682,15 @@ function renderMoviesPage(container) {
     const rating = m.r > 0 ? `<span style="color:#fdcb6e;font-weight:700;">★ ${m.r}</span>` : '';
     const genres = m.g.slice(0, 2).join(', ');
     const posterUrl = m.pi ? `https://image.tmdb.org/t/p/w342/${m.pi}` : '';
-    const posterHtml = posterUrl
-      ? `<img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-         <div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
-           <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.9;">${icon}</div>
-           <div style="font-size:0.85rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.25;">${m.t}</div>
-           <div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;">${m.y || ''}</div>
-         </div>`
-      : `<div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0.8rem;aspect-ratio:2/3;position:relative;overflow:hidden;">
-           <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.9;">${icon}</div>
-           <div style="font-size:0.85rem;font-weight:700;color:white;text-shadow:0 2px 4px rgba(0,0,0,0.5);line-height:1.25;">${m.t}</div>
-           <div style="font-size:0.65rem;color:rgba(255,255,255,0.75);margin-top:0.3rem;">${m.y || ''}</div>
+    const fallbackUrl = `https://image.tmdb.org/t/p/w342/${m.pi}`;
+    const placeholderHtml = `<div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem;aspect-ratio:2/3;position:relative;overflow:hidden;border-radius:10px;">
+           <div style="font-size:2.5rem;margin-bottom:0.6rem;opacity:0.85;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${icon}</div>
+           <div style="font-size:0.9rem;font-weight:700;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);line-height:1.25;max-width:90%;">${m.t}</div>
+           <div style="font-size:0.7rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.y || ''}</div>
          </div>`;
+    const posterHtml = posterUrl
+      ? `<img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">${placeholderHtml.replace('display:flex','display:none')}`
+      : placeholderHtml;
     return `<div class="movie-card" onclick="openMovieModal(${i})">
       ${posterHtml}
       <div class="movie-card-info">

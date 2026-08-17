@@ -681,16 +681,18 @@ function renderMoviesPage(container) {
     const icon = getGenreIcon(m.g);
     const rating = m.r > 0 ? `<span style="color:#fdcb6e;font-weight:700;">★ ${m.r}</span>` : '';
     const genres = m.g.slice(0, 2).join(', ');
-    const posterUrl = m.pi ? `https://image.tmdb.org/t/p/w342/${m.pi}` : '';
-    const fallbackUrl = `https://image.tmdb.org/t/p/w342/${m.pi}`;
-    const placeholderHtml = `<div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem;aspect-ratio:2/3;position:relative;overflow:hidden;border-radius:10px;">
+    const posterBase = m.pi ? `https://image.tmdb.org/t/p/` : '';
+    const posterUrl = posterBase ? `${posterBase}w342/${m.pi}` : '';
+    const posterUrl2 = posterBase ? `${posterBase}w185/${m.pi}` : '';
+    const posterUrl3 = posterBase ? `${posterBase}original/${m.pi}` : '';
+    const placeholderHtml = `<div class="movie-poster-placeholder" style="background:linear-gradient(145deg, ${c1}, ${c2});display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem;aspect-ratio:2/3;position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:10px;">
            <div style="font-size:2.5rem;margin-bottom:0.6rem;opacity:0.85;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${icon}</div>
            <div style="font-size:0.9rem;font-weight:700;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);line-height:1.25;max-width:90%;">${m.t}</div>
            <div style="font-size:0.7rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.y || ''}</div>
          </div>`;
     const posterHtml = posterUrl
-      ? `<img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">${placeholderHtml.replace('display:flex','display:none')}`
-      : placeholderHtml;
+      ? `<div style="position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;border-radius:10px;"><img class="movie-poster-img" src="${posterUrl}" alt="${m.t}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="if(this.src!=='${posterUrl2}'){this.src='${posterUrl2}';}else if(this.src!=='${posterUrl3}'){this.src='${posterUrl3}';}else{this.style.display='none';this.nextElementSibling.style.display='flex';}">${placeholderHtml}</div>`
+      : `<div style="position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;border-radius:10px;">${placeholderHtml.replace('display:none','display:flex')}</div>`;
     return `<div class="movie-card" onclick="openMovieModal(${i})">
       ${posterHtml}
       <div class="movie-card-info">
@@ -741,25 +743,17 @@ function openMovieModal(i) {
   }
 
   const posterLarge = m.pi ? `https://image.tmdb.org/t/p/w780/${m.pi}` : '';
-  const backdropStyle = posterLarge
-    ? `background-image:url('${posterLarge}');background-size:cover;background-position:center top;`
-    : `background:linear-gradient(135deg, ${c1}, ${c2});`;
-  const backdropContent = posterLarge
-    ? `<div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.85));display:flex;align-items:flex-end;padding:1.5rem;">
-        <div>
-          <div style="font-size:1.6rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.8);">${m.t}</div>
-          <div style="font-size:0.85rem;color:rgba(255,255,255,0.85);margin-top:0.3rem;">${m.o !== m.t ? m.o + ' (' : ''}${m.y || ''}${m.o !== m.t ? ')' : ''}</div>
-        </div>
-      </div>`
-    : `<div>
-        <div style="font-size:2.5rem;margin-bottom:0.5rem;">${getGenreIcon(m.g)}</div>
-        <div style="font-size:1.6rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.6);">${m.t}</div>
-        <div style="font-size:0.85rem;color:rgba(255,255,255,0.8);margin-top:0.3rem;">${m.o !== m.t ? m.o + ' (' : ''}${m.y || ''}${m.o !== m.t ? ')' : ''}</div>
-      </div>`;
+  const posterLargeAlt = m.pi ? `https://image.tmdb.org/t/p/original/${m.pi}` : '';
 
   body.innerHTML = `
-    <div class="modal-backdrop" style="position:relative;${backdropStyle}display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;overflow:hidden;">
-      ${backdropContent}
+    <div class="modal-backdrop" style="position:relative;display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(135deg, ${c1}, ${c2});">
+      ${posterLarge ? `<img src="${posterLarge}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;" onerror="this.src='${posterLargeAlt}';this.onerror=()=>{this.style.display='none';}" alt="">` : ''}
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,0.9));"></div>
+      <div style="position:relative;z-index:1;">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">${icon}</div>
+        <div style="font-size:1.6rem;font-weight:800;color:white;text-shadow:0 2px 6px rgba(0,0,0,0.8);">${m.t}</div>
+        <div style="font-size:0.85rem;color:rgba(255,255,255,0.85);margin-top:0.3rem;">${m.o !== m.t ? m.o + ' (' : ''}${m.y || ''}${m.o !== m.t ? ')' : ''}</div>
+      </div>
     </div>
     <div class="modal-body-info">
       <h2 class="modal-title">${m.t}</h2>
